@@ -59,10 +59,6 @@ export class AnswersApiService {
     pageSize: number = 20
   ): Promise<AnswerPost[]> {
     try {
-      logger.debug(
-        `📡 Fetching recent posts: page=${page}, pageSize=${pageSize}`
-      );
-
       const response = await this.client.get<
         AnswerApiResponse<AnswerPostListResponse>
       >(`/answer/api/v1/question/page`, {
@@ -73,20 +69,11 @@ export class AnswersApiService {
         },
       });
 
-      logger.debug(
-        `📡 API Response: code=${response.data.code}, total=${
-          response.data.data?.total || 0
-        }`
-      );
-
       if (response.data.code !== 200) {
         throw new Error(`API Error: ${response.data}`);
       }
 
-      const posts = response.data.data.list;
-      logger.debug(`📡 Retrieved ${posts.length} posts from API`);
-
-      return posts;
+      return response.data.data.list;
     } catch (error) {
       logger.error("Failed to fetch recent posts:", error);
       throw error;
@@ -118,19 +105,7 @@ export class AnswersApiService {
    */
   async checkForNewPosts(): Promise<AnswerPost[]> {
     try {
-      logger.info("🔍 Checking for new posts...");
       const recentPosts = await this.getRecentPosts(1, 10);
-
-      logger.info(`📊 Found ${recentPosts.length} recent posts from API`);
-      logger.debug(
-        "Recent posts:",
-        recentPosts.map((post) => ({
-          id: post.id,
-          title: post.title.substring(0, 50) + "...",
-          author: post.operator.display_name,
-          created_at: post.created_at,
-        }))
-      );
 
       if (!this.lastCheckedPostId) {
         // First run - set the latest post as baseline
@@ -138,43 +113,21 @@ export class AnswersApiService {
         logger.info(
           `🎯 Initial baseline set to post ID: ${this.lastCheckedPostId}`
         );
-        logger.info("📝 No new posts to report on first run.");
         return [];
       }
 
-      logger.info(
-        `🔍 Comparing against baseline post ID: ${this.lastCheckedPostId}`
-      );
-
       // Find posts newer than our last check
-      // We need to find posts that are newer than our baseline
-      // Since posts are ordered by newest first, we take posts until we hit our baseline
       const newPosts = [];
       for (const post of recentPosts) {
         if (post.id === this.lastCheckedPostId) {
-          // We've reached our baseline, stop here
           break;
         }
         newPosts.push(post);
-        logger.debug(
-          `Post ${post.id}: is newer than baseline ${this.lastCheckedPostId}`
-        );
       }
 
-      logger.info(
-        `🔍 Found ${newPosts.length} posts that are newer than baseline`
-      );
-
       if (newPosts.length > 0) {
-        // Update our baseline to the newest post
-        const previousBaseline = this.lastCheckedPostId;
         this.lastCheckedPostId = recentPosts[0].id;
-        logger.info(
-          `🎯 Updated baseline from ${previousBaseline} to ${this.lastCheckedPostId}`
-        );
         logger.info(`🎉 Found ${newPosts.length} new posts!`);
-      } else {
-        logger.info("📭 No new posts found this check");
       }
 
       return newPosts;

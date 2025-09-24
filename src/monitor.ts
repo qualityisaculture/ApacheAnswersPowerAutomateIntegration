@@ -67,14 +67,9 @@ export class PostMonitor {
    */
   private async checkForNewPosts(): Promise<void> {
     try {
-      logger.info("⏰ Starting post check cycle...");
       const newPosts = await this.answersApi.checkForNewPosts();
 
       if (newPosts.length > 0) {
-        logger.info(
-          `🎉 Found ${newPosts.length} new post(s) in Apache Answers!`
-        );
-
         newPosts.forEach((post, index) => {
           logger.info(`📝 New Post #${index + 1}:`, {
             id: post.id,
@@ -85,11 +80,7 @@ export class PostMonitor {
             url: `${config.answers.baseUrl}/questions/${post.id}`,
           });
         });
-      } else {
-        logger.info("📭 No new posts found this cycle");
       }
-
-      logger.info("✅ Post check cycle completed");
     } catch (error) {
       logger.error("❌ Error checking for new posts:", error);
     }
