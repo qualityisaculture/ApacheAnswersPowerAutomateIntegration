@@ -2,6 +2,12 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+export interface ChannelMapping {
+  tags: string[];
+  webhookUrl: string;
+  channelName: string;
+}
+
 export interface Config {
   answers: {
     baseUrl: string;
@@ -14,7 +20,8 @@ export interface Config {
     logLevel: string;
   };
   teams: {
-    webhookUrl?: string;
+    defaultChannel?: ChannelMapping;
+    channels: ChannelMapping[];
   };
 }
 
@@ -30,6 +37,15 @@ export const config: Config = {
     logLevel: process.env.LOG_LEVEL || "info",
   },
   teams: {
-    webhookUrl: process.env.TEAMS_WEBHOOK_URL,
+    defaultChannel: process.env.TEAMS_DEFAULT_WEBHOOK_URL
+      ? {
+          tags: [],
+          webhookUrl: process.env.TEAMS_DEFAULT_WEBHOOK_URL,
+          channelName: "Default",
+        }
+      : undefined,
+    channels: process.env.TEAMS_CHANNELS
+      ? JSON.parse(process.env.TEAMS_CHANNELS)
+      : [],
   },
 };

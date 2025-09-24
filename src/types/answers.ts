@@ -1,22 +1,37 @@
 export interface AnswerPost {
+  accepted_answer_id: string;
+  answer_count: number;
+  collection_count: number;
+  created_at: number;
+  description: string;
+  follow_count: number;
   id: string;
-  title: string;
-  content: string;
+  last_answer_id: string;
+  operated_at: number;
+  operation_type: string;
   operator: {
-    id: string;
-    username: string;
-    display_name: string;
     avatar: string;
+    display_name: string;
+    id: string;
     rank: number;
     status: string;
+    username: string;
   };
-  created_at: string;
-  updated_at: string;
-  tags: string[];
-  status: "normal" | "closed" | "deleted";
+  pin: number;
+  show: number;
+  status: number;
+  tags: Array<{
+    display_name: string;
+    main_tag_slug_name: string;
+    recommend: boolean;
+    reserved: boolean;
+    slug_name: string;
+  }>;
+  title: string;
+  unique_view_count: number;
+  url_title: string;
   view_count: number;
   vote_count: number;
-  answer_count: number;
 }
 
 export interface AnswerUser {

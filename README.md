@@ -76,8 +76,9 @@ This tool enables seamless communication between Apache Answers and Microsoft Te
    CHECK_INTERVAL_MS=30000
    LOG_LEVEL=info
 
-   # Teams Configuration (for future use)
-   TEAMS_WEBHOOK_URL=your_teams_webhook_url
+   # Teams Configuration
+   TEAMS_DEFAULT_WEBHOOK_URL=your_default_teams_webhook_url
+   TEAMS_CHANNELS=[{"tags":["javascript","typescript"],"webhookUrl":"your_js_teams_webhook","channelName":"JavaScript"},{"tags":["python","django"],"webhookUrl":"your_python_teams_webhook","channelName":"Python"}]
    ```
 
 ### Getting Your Access Token
@@ -136,26 +137,67 @@ npm run watch
 
 The integration will:
 
-- Connect to your Apache Answers instance
-- Monitor for new posts every 30 seconds (configurable)
-- Log detailed information about new posts including:
-  - Post ID, title, and content
+- **Monitor Apache Answers**: Check for new posts every 30 seconds (configurable)
+- **Route to Teams**: Automatically send new posts to appropriate Teams channels based on tags
+- **Rich Messages**: Create beautiful Adaptive Cards in Teams with:
+  - Post title and description
   - Author information
   - Creation timestamp
   - Tags and metadata
-  - Direct URL to the post
+  - Direct link to the Apache Answers post
 
 ### Configuration Options
 
-| Environment Variable   | Description                                                    | Default                   |
-| ---------------------- | -------------------------------------------------------------- | ------------------------- |
-| `ANSWERS_BASE_URL`     | Your Apache Answers instance URL                               | `https://meta.answer.dev` |
-| `ANSWERS_ACCESS_TOKEN` | Access token for authentication (get with `npm run get-token`) | -                         |
-| `ANSWERS_EMAIL`        | Email for authentication (required to get token)               | -                         |
-| `ANSWERS_PASSWORD`     | Password for authentication (required to get token)            | -                         |
-| `CHECK_INTERVAL_MS`    | How often to check for new posts (milliseconds)                | `30000`                   |
-| `LOG_LEVEL`            | Logging level (debug, info, warn, error)                       | `info`                    |
-| `TEAMS_WEBHOOK_URL`    | Teams webhook URL (for future use)                             | -                         |
+| Environment Variable        | Description                                                          | Default                   |
+| --------------------------- | -------------------------------------------------------------------- | ------------------------- |
+| `ANSWERS_BASE_URL`          | Your Apache Answers instance URL                                     | `https://meta.answer.dev` |
+| `ANSWERS_ACCESS_TOKEN`      | Access token for authentication (get with `npm run get-token`)       | -                         |
+| `ANSWERS_EMAIL`             | Email for authentication (required to get token)                     | -                         |
+| `ANSWERS_PASSWORD`          | Password for authentication (required to get token)                  | -                         |
+| `CHECK_INTERVAL_MS`         | How often to check for new posts (milliseconds)                      | `30000`                   |
+| `LOG_LEVEL`                 | Logging level (debug, info, warn, error)                             | `info`                    |
+| `TEAMS_DEFAULT_WEBHOOK_URL` | Default Teams webhook URL (fallback for posts without matching tags) | -                         |
+| `TEAMS_CHANNELS`            | JSON array of channel mappings with tags and webhook URLs            | `[]`                      |
+
+### Teams Integration
+
+The integration supports automatic posting to Microsoft Teams channels based on post tags:
+
+#### **Default Channel**
+
+Set `TEAMS_DEFAULT_WEBHOOK_URL` to post all new questions to a default Teams channel.
+
+#### **Tag-Based Channels**
+
+Use `TEAMS_CHANNELS` to route posts to specific channels based on their tags:
+
+```json
+[
+  {
+    "tags": ["javascript", "typescript"],
+    "webhookUrl": "https://your-js-teams-webhook-url",
+    "channelName": "JavaScript"
+  },
+  {
+    "tags": ["python", "django"],
+    "webhookUrl": "https://your-python-teams-webhook-url",
+    "channelName": "Python"
+  },
+  {
+    "tags": ["general", "help"],
+    "webhookUrl": "https://your-general-teams-webhook-url",
+    "channelName": "General"
+  }
+]
+```
+
+#### **How It Works**
+
+1. **New post detected** in Apache Answers
+2. **Tags analyzed** to find matching channels
+3. **Posts sent** to all matching Teams channels
+4. **Fallback** to default channel if no matches found
+5. **Rich cards** displayed in Teams with post details
 
 ### Logs
 

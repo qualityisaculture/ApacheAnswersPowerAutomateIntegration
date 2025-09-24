@@ -1,14 +1,17 @@
 import { AnswersApiService } from "./services/answersApi";
+import { TeamsService } from "./services/teamsService";
 import { config } from "./config/config";
 import logger from "./services/logger";
 
 export class PostMonitor {
   private answersApi: AnswersApiService;
+  private teamsService: TeamsService;
   private isRunning: boolean = false;
   private intervalId: NodeJS.Timeout | null = null;
 
   constructor() {
     this.answersApi = new AnswersApiService();
+    this.teamsService = new TeamsService();
   }
 
   /**
@@ -70,16 +73,18 @@ export class PostMonitor {
       const newPosts = await this.answersApi.checkForNewPosts();
 
       if (newPosts.length > 0) {
-        newPosts.forEach((post, index) => {
-          logger.info(`📝 New Post #${index + 1}:`, {
-            id: post.id,
-            title: post.title,
-            author: post.operator.username,
-            created_at: post.created_at,
-            tags: post.tags,
-            url: `${config.answers.baseUrl}/questions/${post.id}`,
-          });
-        });
+        for (const post of newPosts) {
+          logger.info(
+            `📝 New Post: ${post.title} by ${post.operator.username}`
+          );
+
+          // Send to Teams
+          try {
+            await this.teamsService.sendPostToTeams(post);
+          } catch (error) {
+            logger.error(`❌ Failed to send post to Teams:`, error);
+          }
+        }
       }
     } catch (error) {
       logger.error("❌ Error checking for new posts:", error);
