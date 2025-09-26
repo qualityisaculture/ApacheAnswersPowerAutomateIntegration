@@ -194,7 +194,7 @@ export class TeamsService {
               },
               {
                 type: "TextBlock",
-                text: `🔗 [${questionTitle}](${questionUrl})`,
+                text: questionUrl,
                 weight: "normal",
                 size: "medium",
                 color: "default",

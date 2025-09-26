@@ -92,7 +92,7 @@ export interface AnswerQuestionRequest {
 
 export interface AnswerQuestionResponse {
   code: number;
-  data: string;
+  data: AnswerPost;
   msg: string;
   reason: string;
 }

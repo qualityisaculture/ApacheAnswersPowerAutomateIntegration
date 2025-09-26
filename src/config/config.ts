@@ -11,6 +11,7 @@ export interface ChannelMapping {
 export interface Config {
   answers: {
     baseUrl: string;
+    publicUrl?: string;
     accessToken?: string;
     email?: string;
     password?: string;
@@ -32,6 +33,7 @@ export interface Config {
 export const config: Config = {
   answers: {
     baseUrl: process.env.ANSWERS_BASE_URL || "https://meta.answer.dev",
+    publicUrl: process.env.ANSWERS_PUBLIC_URL,
     accessToken: process.env.ANSWERS_ACCESS_TOKEN,
     email: process.env.ANSWERS_EMAIL,
     password: process.env.ANSWERS_PASSWORD,

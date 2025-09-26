@@ -109,13 +109,16 @@ export class CallbackService {
                 tag
               );
 
+            // Extract the question ID from the response
+            const questionId = questionResponse.data.id;
+
             logger.info(
-              `✅ Successfully posted Teams message as question: ${questionResponse.data}`
+              `✅ Successfully posted Teams message as question with ID: ${questionId}`
             );
 
             // Send notification back to Teams with the question URL
             try {
-              const questionUrl = `${config.answers.baseUrl}/questions/${questionResponse.data}`;
+              const questionUrl = `${config.answers.baseUrl}/questions/${questionId}`;
               await this.teamsService.sendNewQuestionNotification(
                 messageId,
                 questionUrl,
@@ -134,7 +137,7 @@ export class CallbackService {
               success: true,
               message: "Teams message posted as question successfully",
               timestamp: new Date().toISOString(),
-              questionId: questionResponse.data,
+              questionId: questionId,
               receivedData: {
                 item,
                 teamId,
