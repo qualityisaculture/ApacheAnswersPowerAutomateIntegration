@@ -6,7 +6,6 @@ import logger from "./logger";
 
 export interface PowerAutomateCallback {
   messageId: string;
-  conversationId: string;
   messageLink: string;
   body: string;
   postId: string;
@@ -216,7 +215,6 @@ export class CallbackService {
         try {
           const callbackData: PowerAutomateCallback = {
             messageId: req.query.messageId as string,
-            conversationId: req.query.conversationId as string,
             messageLink: req.query.messageLink as string,
             body: req.query.body as string,
             postId: req.query.postId as string,
@@ -227,7 +225,6 @@ export class CallbackService {
           // Log the callback data
           logger.info("🔄 Received Power Automate callback:", {
             messageId: callbackData.messageId,
-            conversationId: callbackData.conversationId,
             messageLink: callbackData.messageLink,
             body: callbackData.body,
             postId: callbackData.postId,
@@ -236,19 +233,22 @@ export class CallbackService {
 
           // Log detailed information
           logger.info(`📨 Message ID: ${callbackData.messageId}`);
-          logger.info(`💬 Conversation ID: ${callbackData.conversationId}`);
           logger.info(`🔗 Message Link: ${callbackData.messageLink}`);
           logger.info(`📝 Message Body: ${callbackData.body}`);
           logger.info(`🔍 Apache Answers Post ID: ${callbackData.postId}`);
 
           if (callbackData.postId) {
             try {
-              // Post a comment to the Apache Answers post
-              await this.answersApi.postTeamsMessageComment(
+              // Post a comment to the Apache Answers post with messageId
+              await this.answersApi.postComment(
                 callbackData.postId,
-                callbackData.messageLink,
-                callbackData.messageId,
-                callbackData.conversationId
+                `Teams Message ID: ${callbackData.messageId}`
+              );
+
+              // Post a separate comment with the Teams link
+              await this.answersApi.postComment(
+                callbackData.postId,
+                `[View in Teams](${callbackData.messageLink})`
               );
 
               logger.info(

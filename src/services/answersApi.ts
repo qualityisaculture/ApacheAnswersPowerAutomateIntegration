@@ -179,15 +179,13 @@ export class AnswersApiService {
   async postTeamsMessageComment(
     questionId: string,
     messageLink: string,
-    messageId: string,
-    conversationId: string
+    messageId: string
   ): Promise<AnswerComment> {
-    const commentContent = `${messageLink}\nMessage Id: ${messageId}\nConversation Id: ${conversationId}`;
+    const commentContent = `[View in Teams](${messageLink})\nTeams Message ID: ${messageId}`;
 
     logger.info(`📝 Posting Teams message comment to question ${questionId}`);
     logger.info(`🔗 Message Link: ${messageLink}`);
     logger.info(`📨 Message ID: ${messageId}`);
-    logger.info(`💬 Conversation ID: ${conversationId}`);
 
     return this.postComment(questionId, commentContent);
   }
