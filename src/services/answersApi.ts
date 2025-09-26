@@ -308,6 +308,76 @@ export class AnswersApiService {
   }
 
   /**
+   * Get comments for a specific question
+   */
+  async getCommentsForQuestion(questionId: string): Promise<AnswerComment[]> {
+    try {
+      const response = await this.client.get<
+        AnswerApiResponse<{
+          count: number;
+          list: AnswerComment[];
+        }>
+      >(`/answer/api/v1/comment/page`, {
+        params: {
+          object_id: questionId,
+          page: 1,
+          page_size: 50,
+        },
+      });
+
+      if (response.data.code !== 200) {
+        throw new Error(`API Error: ${JSON.stringify(response.data)}`);
+      }
+
+      logger.debug(
+        `Fetched ${response.data.data.list.length} comments for question ${questionId}`
+      );
+      return response.data.data.list;
+    } catch (error) {
+      logger.error(
+        `Failed to fetch comments for question ${questionId}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Extract Teams message ID from question comments
+   */
+  async getTeamsMessageIdForQuestion(
+    questionId: string
+  ): Promise<string | null> {
+    try {
+      const comments = await this.getCommentsForQuestion(questionId);
+
+      // Look for a comment containing "Teams Message ID:"
+      for (const comment of comments) {
+        if (comment.original_text.includes("Teams Message ID:")) {
+          const match = comment.original_text.match(
+            /Teams Message ID:\s*([^\s\n]+)/
+          );
+          if (match && match[1]) {
+            logger.debug(
+              `Found Teams message ID for question ${questionId}: ${match[1]}`
+            );
+            return match[1];
+          }
+        }
+      }
+
+      logger.debug(`No Teams message ID found for question ${questionId}`);
+      return null;
+    } catch (error) {
+      logger.error(
+        `Failed to extract Teams message ID for question ${questionId}:`,
+        error
+      );
+      return null;
+    }
+  }
+
+  /**
    * Test API connectivity
    */
   async testConnection(): Promise<boolean> {

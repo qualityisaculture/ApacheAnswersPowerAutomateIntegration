@@ -142,11 +142,54 @@ export class PostMonitor {
 
           totalNewAnswers += newAnswerIds.length;
 
-          // Collect new answer details
+          // Collect new answer details and handle Teams replies
           if (newAnswerIds.length > 0) {
             newAnswerDetails.push(
               `"${post.title}": [${newAnswerIds.join(", ")}]`
             );
+
+            // Try to reply to the Teams message if this question has one
+            try {
+              const teamsMessageId =
+                await this.answersApi.getTeamsMessageIdForQuestion(post.id);
+              if (teamsMessageId) {
+                const answerUrl = `${config.answers.baseUrl}/questions/${post.id}`;
+
+                // Get the actual answer content for the new answers
+                const newAnswers = answers.filter((answer) =>
+                  newAnswerIds.includes(answer.id)
+                );
+                const answerMessages = newAnswers
+                  .map((answer) => {
+                    const content =
+                      answer.content.substring(0, 200) +
+                      (answer.content.length > 200 ? "..." : "");
+                    return `**${answer.user_info.display_name}**: ${content}`;
+                  })
+                  .join("\n\n");
+
+                const answerText = `New answer added:\n\n${answerMessages}`;
+
+                await this.teamsService.replyToTeamsMessageWithURL(
+                  teamsMessageId,
+                  answerUrl,
+                  answerText
+                );
+
+                logger.info(
+                  `📤 Replied to Teams message for question "${post.title}"`
+                );
+              } else {
+                logger.debug(
+                  `No Teams message ID found for question "${post.title}"`
+                );
+              }
+            } catch (teamsError) {
+              logger.error(
+                `❌ Failed to reply to Teams for question "${post.title}":`,
+                teamsError
+              );
+            }
           }
         } catch (error) {
           logger.error(
