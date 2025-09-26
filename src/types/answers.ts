@@ -77,3 +77,22 @@ export interface AnswerCommentRequest {
   original_text: string;
   reply_comment_id?: string;
 }
+
+export interface AnswerQuestionRequest {
+  captcha_code?: string;
+  captcha_id?: string;
+  content: string;
+  tags: Array<{
+    display_name: string;
+    original_text: string;
+    slug_name: string;
+  }>;
+  title: string;
+}
+
+export interface AnswerQuestionResponse {
+  code: number;
+  data: string;
+  msg: string;
+  reason: string;
+}

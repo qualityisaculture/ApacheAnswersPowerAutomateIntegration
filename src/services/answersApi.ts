@@ -5,6 +5,8 @@ import {
   AnswerPostListResponse,
   AnswerComment,
   AnswerCommentRequest,
+  AnswerQuestionRequest,
+  AnswerQuestionResponse,
 } from "../types/answers";
 import { config } from "../config/config";
 import logger from "./logger";
@@ -188,6 +190,83 @@ export class AnswersApiService {
     logger.info(`💬 Conversation ID: ${conversationId}`);
 
     return this.postComment(questionId, commentContent);
+  }
+
+  /**
+   * Post a new question to Apache Answers
+   */
+  async postQuestion(
+    title: string,
+    content: string,
+    tags: Array<{
+      display_name: string;
+      original_text: string;
+      slug_name: string;
+    }> = []
+  ): Promise<AnswerQuestionResponse> {
+    try {
+      const requestBody: AnswerQuestionRequest = {
+        content,
+        tags,
+        title,
+      };
+
+      logger.info(`📝 Posting new question: ${title}`);
+
+      const response = await this.client.post<AnswerQuestionResponse>(
+        `/answer/api/v1/question`,
+        requestBody
+      );
+
+      if (response.data.code !== 200) {
+        throw new Error(`API Error: ${response.data.msg}`);
+      }
+
+      logger.info(`✅ Successfully posted question: ${title}`);
+      return response.data;
+    } catch (error) {
+      logger.error(`Failed to post question: ${title}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Post a Teams message as a question to Apache Answers
+   */
+  async postTeamsMessageAsQuestion(
+    title: string,
+    content: string,
+    teamId: string,
+    channelId: string,
+    messageId: string,
+    messageLink: string,
+    additionalTag?: string
+  ): Promise<AnswerQuestionResponse> {
+    // Add the from_teams tag to prevent infinite loops
+    const tags = [
+      {
+        display_name: "from_teams",
+        original_text: "from_teams",
+        slug_name: "from_teams",
+      },
+    ];
+
+    // Add the additional tag if provided
+    if (additionalTag) {
+      tags.push({
+        display_name: additionalTag,
+        original_text: additionalTag,
+        slug_name: additionalTag,
+      });
+    }
+
+    // Enhance the content with Teams context
+    const enhancedContent = `${content}\n\n---\n*Posted from Microsoft Teams*\nTeam ID: ${teamId}\nChannel ID: ${channelId}\nMessage ID: ${messageId}\n[View in Teams](${messageLink})`;
+
+    logger.info(`📝 Posting Teams message as question: ${title}`);
+    logger.info(`🔗 Message Link: ${messageLink}`);
+
+    return this.postQuestion(title, enhancedContent, tags);
   }
 
   /**

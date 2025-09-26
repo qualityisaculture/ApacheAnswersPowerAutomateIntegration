@@ -74,6 +74,18 @@ export class PostMonitor {
 
       if (newPosts.length > 0) {
         for (const post of newPosts) {
+          // Check if this post has the "from_teams" tag to prevent infinite loops
+          const hasFromTeamsTag = post.tags.some(
+            (tag) => tag.slug_name === "from_teams"
+          );
+
+          if (hasFromTeamsTag) {
+            logger.info(
+              `🚫 Skipping post with "from_teams" tag: ${post.title} by ${post.operator.username}`
+            );
+            continue;
+          }
+
           logger.info(
             `📝 New Post: ${post.title} by ${post.operator.username}`
           );

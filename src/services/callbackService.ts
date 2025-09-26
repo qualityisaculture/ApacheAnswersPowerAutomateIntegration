@@ -47,6 +47,121 @@ export class CallbackService {
       });
     });
 
+    // Teams message callback endpoint
+    this.app.get(
+      "/callback/teams-message",
+      async (req: Request, res: Response) => {
+        try {
+          const item = req.query.item as string;
+          const teamId = req.query.teamId as string;
+          const channelId = req.query.channelId as string;
+          const messageId = req.query.messageId as string;
+          const messageLink = req.query.messageLink as string;
+          const tag = req.query.tag as string;
+
+          // Log the received parameters
+          logger.info("📨 Received Teams message callback:", {
+            item,
+            teamId,
+            channelId,
+            messageId,
+            messageLink,
+            tag,
+            timestamp: new Date().toISOString(),
+          });
+
+          // Log detailed information
+          logger.info(`📦 Item: ${JSON.stringify(item, null, 2)}`);
+          logger.info(`👥 Team ID: ${teamId}`);
+          logger.info(`💬 Channel ID: ${channelId}`);
+          logger.info(`📨 Message ID: ${messageId}`);
+          logger.info(`🔗 Message Link: ${messageLink}`);
+          logger.info(`🏷️ Tag: ${tag || "No tag provided"}`);
+
+          // Extract message content from item (item is a string from query params)
+          let messageContent = "No content available";
+          try {
+            const itemObj = JSON.parse(item);
+            messageContent =
+              itemObj?.body?.content ||
+              itemObj?.text ||
+              item ||
+              "No content available";
+          } catch {
+            // If item is not JSON, use it as plain text
+            messageContent = item || "No content available";
+          }
+          const messageTitle = `Teams Message from ${teamId}`;
+
+          // Post the Teams message as a question to Apache Answers
+          try {
+            const questionResponse =
+              await this.answersApi.postTeamsMessageAsQuestion(
+                messageTitle,
+                messageContent,
+                teamId,
+                channelId,
+                messageId,
+                messageLink,
+                tag
+              );
+
+            logger.info(
+              `✅ Successfully posted Teams message as question: ${questionResponse.data}`
+            );
+
+            // Respond with success
+            res.status(200).json({
+              success: true,
+              message: "Teams message posted as question successfully",
+              timestamp: new Date().toISOString(),
+              questionId: questionResponse.data,
+              receivedData: {
+                item,
+                teamId,
+                channelId,
+                messageId,
+                messageLink,
+                tag,
+              },
+            });
+          } catch (questionError) {
+            logger.error(
+              `❌ Failed to post Teams message as question:`,
+              questionError
+            );
+
+            // Still respond with success for the callback, but indicate the question posting failed
+            res.status(200).json({
+              success: true,
+              message:
+                "Teams message callback received but failed to post as question",
+              timestamp: new Date().toISOString(),
+              error:
+                questionError instanceof Error
+                  ? questionError.message
+                  : "Unknown error",
+              receivedData: {
+                item,
+                teamId,
+                channelId,
+                messageId,
+                messageLink,
+                tag,
+              },
+            });
+          }
+        } catch (error) {
+          logger.error("❌ Error processing Teams message callback:", error);
+          res.status(500).json({
+            success: false,
+            message: "Error processing Teams message callback",
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+        }
+      }
+    );
+
     // Power Automate callback endpoint
     this.app.get(
       "/callback/power-automate",
@@ -129,7 +244,11 @@ export class CallbackService {
       res.status(404).json({
         success: false,
         message: "Route not found",
-        availableRoutes: ["/health", "/callback/power-automate"],
+        availableRoutes: [
+          "/health",
+          "/callback/power-automate",
+          "/callback/teams-message",
+        ],
       });
     });
   }
@@ -143,7 +262,10 @@ export class CallbackService {
         this.server = this.app.listen(this.port, () => {
           logger.info(`🌐 HTTP server started on port ${this.port}`);
           logger.info(
-            `📡 Callback endpoint available at: http://localhost:${this.port}/callback/power-automate`
+            `📡 Power Automate callback endpoint available at: http://localhost:${this.port}/callback/power-automate`
+          );
+          logger.info(
+            `💬 Teams message callback endpoint available at: http://localhost:${this.port}/callback/teams-message`
           );
           logger.info(
             `❤️  Health check available at: http://localhost:${this.port}/health`
