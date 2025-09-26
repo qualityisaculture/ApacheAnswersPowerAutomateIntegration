@@ -58,15 +58,28 @@ export interface AnswerPostListResponse {
 }
 
 export interface AnswerComment {
-  id: string;
-  content: string;
+  comment_id: string;
   created_at: number;
-  user: {
-    id: string;
-    username: string;
-    display_name: string;
-    avatar: string;
-  };
+  is_vote: boolean;
+  member_actions: Array<{
+    action: string;
+    name: string;
+    type: string;
+  }>;
+  object_id: string;
+  original_text: string;
+  parsed_text: string;
+  reply_comment_id: string;
+  reply_user_display_name: string;
+  reply_user_id: string;
+  reply_user_status: string;
+  reply_username: string;
+  user_avatar: string;
+  user_display_name: string;
+  user_id: string;
+  user_status: string;
+  username: string;
+  vote_count: number;
 }
 
 export interface AnswerCommentRequest {

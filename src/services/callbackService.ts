@@ -124,6 +124,23 @@ export class CallbackService {
               `✅ Successfully posted Teams message as question with ID: ${questionId}`
             );
 
+            // Add a comment with the messageId to the question
+            try {
+              await this.answersApi.postComment(
+                questionId,
+                `Teams Message ID: ${messageId}`
+              );
+              logger.info(
+                `✅ Successfully added messageId comment to question ${questionId}`
+              );
+            } catch (commentError) {
+              logger.error(
+                `❌ Failed to add messageId comment to question ${questionId}:`,
+                commentError
+              );
+              // Don't fail the entire request if comment fails
+            }
+
             // Send notification back to Teams with the question URL
             try {
               const questionUrl = `${config.answers.baseUrl}/questions/${questionId}`;
