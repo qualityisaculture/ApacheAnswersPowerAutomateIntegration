@@ -56,3 +56,24 @@ export interface AnswerPostListResponse {
   page: number;
   page_size: number;
 }
+
+export interface AnswerComment {
+  id: string;
+  content: string;
+  created_at: number;
+  user: {
+    id: string;
+    username: string;
+    display_name: string;
+    avatar: string;
+  };
+}
+
+export interface AnswerCommentRequest {
+  captcha_code?: string;
+  captcha_id?: string;
+  mention_username_list?: string[];
+  object_id: string;
+  original_text: string;
+  reply_comment_id?: string;
+}

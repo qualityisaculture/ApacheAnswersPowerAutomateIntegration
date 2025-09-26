@@ -3,6 +3,8 @@ import {
   AnswerPost,
   AnswerApiResponse,
   AnswerPostListResponse,
+  AnswerComment,
+  AnswerCommentRequest,
 } from "../types/answers";
 import { config } from "../config/config";
 import logger from "./logger";
@@ -135,6 +137,57 @@ export class AnswersApiService {
       logger.error("Failed to check for new posts:", error);
       return [];
     }
+  }
+
+  /**
+   * Post a comment to a specific question
+   */
+  async postComment(
+    questionId: string,
+    content: string
+  ): Promise<AnswerComment> {
+    try {
+      const requestBody: AnswerCommentRequest = {
+        object_id: questionId,
+        original_text: content,
+      };
+
+      logger.info(`📝 Posting comment to question ${questionId}:`, requestBody);
+
+      const response = await this.client.post<AnswerApiResponse<AnswerComment>>(
+        `/answer/api/v1/comment`,
+        requestBody
+      );
+
+      if (response.data.code !== 200) {
+        throw new Error(`API Error: ${response.data.message}`);
+      }
+
+      logger.info(`✅ Successfully posted comment to question ${questionId}`);
+      return response.data.data;
+    } catch (error) {
+      logger.error(`Failed to post comment to question ${questionId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Post a Teams message link as a comment to a question
+   */
+  async postTeamsMessageComment(
+    questionId: string,
+    messageLink: string,
+    messageId: string,
+    conversationId: string
+  ): Promise<AnswerComment> {
+    const commentContent = `${messageLink}\nMessage Id: ${messageId}\nConversation Id: ${conversationId}`;
+
+    logger.info(`📝 Posting Teams message comment to question ${questionId}`);
+    logger.info(`🔗 Message Link: ${messageLink}`);
+    logger.info(`📨 Message ID: ${messageId}`);
+    logger.info(`💬 Conversation ID: ${conversationId}`);
+
+    return this.postComment(questionId, commentContent);
   }
 
   /**

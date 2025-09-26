@@ -101,6 +101,12 @@ export class TeamsService {
                 size: "small",
                 color: "accent",
               },
+              {
+                type: "TextBlock",
+                text: `${post.id}`,
+                size: "small",
+                color: "light",
+              },
             ],
           },
         },

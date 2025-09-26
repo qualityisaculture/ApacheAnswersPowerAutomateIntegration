@@ -23,6 +23,9 @@ export interface Config {
     defaultChannel?: ChannelMapping;
     channels: ChannelMapping[];
   };
+  callback: {
+    port: number;
+  };
 }
 
 export const config: Config = {
@@ -47,5 +50,8 @@ export const config: Config = {
     channels: process.env.TEAMS_CHANNELS
       ? JSON.parse(process.env.TEAMS_CHANNELS)
       : [],
+  },
+  callback: {
+    port: parseInt(process.env.CALLBACK_PORT || "3000", 10),
   },
 };
