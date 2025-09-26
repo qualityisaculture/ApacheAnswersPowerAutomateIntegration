@@ -22,6 +22,7 @@ export interface Config {
   teams: {
     defaultChannel?: ChannelMapping;
     channels: ChannelMapping[];
+    newPostReplyWebhook?: string;
   };
   callback: {
     port: number;
@@ -50,6 +51,7 @@ export const config: Config = {
     channels: process.env.TEAMS_CHANNELS
       ? JSON.parse(process.env.TEAMS_CHANNELS)
       : [],
+    newPostReplyWebhook: process.env.TEAMS_NEW_POST_REPLY_WEBHOOK,
   },
   callback: {
     port: parseInt(process.env.CALLBACK_PORT || "3000", 10),

@@ -158,4 +158,71 @@ export class TeamsService {
       throw error;
     }
   }
+
+  /**
+   * Send a new question notification to Teams with messageId and URL
+   */
+  async sendNewQuestionNotification(
+    messageId: string,
+    questionUrl: string,
+    questionTitle: string
+  ): Promise<void> {
+    if (!config.teams.newPostReplyWebhook) {
+      logger.warn(
+        "⚠️ No new post reply webhook configured, skipping notification"
+      );
+      return;
+    }
+
+    const message: TeamsMessage = {
+      type: "message",
+      attachments: [
+        {
+          contentType: "application/vnd.microsoft.card.adaptive",
+          contentUrl: null,
+          content: {
+            $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
+            type: "AdaptiveCard",
+            version: "1.2",
+            body: [
+              {
+                type: "TextBlock",
+                text: messageId,
+                weight: "bolder",
+                size: "medium",
+                color: "accent",
+              },
+              {
+                type: "TextBlock",
+                text: `🔗 [${questionTitle}](${questionUrl})`,
+                weight: "normal",
+                size: "medium",
+                color: "default",
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    try {
+      logger.info(`📤 Sending new question notification to Teams...`);
+      logger.info(`📨 Message ID: ${messageId}`);
+      logger.info(`🔗 Question URL: ${questionUrl}`);
+
+      await axios.post(config.teams.newPostReplyWebhook, message, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      logger.info(`✅ Successfully sent new question notification to Teams`);
+    } catch (error) {
+      logger.error(
+        "❌ Failed to send new question notification to Teams:",
+        error
+      );
+      throw error;
+    }
+  }
 }

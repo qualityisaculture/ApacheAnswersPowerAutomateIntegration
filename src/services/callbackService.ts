@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import { config } from "../config/config";
 import { AnswersApiService } from "./answersApi";
+import { TeamsService } from "./teamsService";
 import logger from "./logger";
 
 export interface PowerAutomateCallback {
@@ -17,11 +18,13 @@ export class CallbackService {
   private server: any;
   private port: number;
   private answersApi: AnswersApiService;
+  private teamsService: TeamsService;
 
   constructor(port?: number) {
     this.app = express();
     this.port = port || config.callback.port;
     this.answersApi = new AnswersApiService();
+    this.teamsService = new TeamsService();
     this.setupMiddleware();
     this.setupRoutes();
   }
@@ -109,6 +112,22 @@ export class CallbackService {
             logger.info(
               `✅ Successfully posted Teams message as question: ${questionResponse.data}`
             );
+
+            // Send notification back to Teams with the question URL
+            try {
+              const questionUrl = `${config.answers.baseUrl}/questions/${questionResponse.data}`;
+              await this.teamsService.sendNewQuestionNotification(
+                messageId,
+                questionUrl,
+                messageTitle
+              );
+            } catch (notificationError) {
+              logger.error(
+                `❌ Failed to send Teams notification:`,
+                notificationError
+              );
+              // Don't fail the entire request if notification fails
+            }
 
             // Respond with success
             res.status(200).json({
