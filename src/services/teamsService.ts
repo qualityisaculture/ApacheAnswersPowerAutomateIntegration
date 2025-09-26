@@ -2,6 +2,7 @@ import axios from "axios";
 import { AnswerPost } from "../types/answers";
 import { ChannelMapping, config } from "../config/config";
 import logger from "./logger";
+import { SentQuestionsTracker } from "./sentQuestionsTracker";
 
 interface TeamsMessage {
   type: "message";
@@ -31,6 +32,12 @@ interface TeamsMessage {
 }
 
 export class TeamsService {
+  private sentQuestionsTracker: SentQuestionsTracker;
+
+  constructor() {
+    this.sentQuestionsTracker = SentQuestionsTracker.getInstance();
+  }
+
   /**
    * Find the appropriate channel(s) for a post based on its tags
    */
@@ -150,6 +157,14 @@ export class TeamsService {
 
     try {
       await Promise.all(sendPromises);
+
+      // Track this question as sent to Teams
+      logger.info(
+        `📝 About to track question: "${post.title}" (ID: ${post.id})`
+      );
+      this.sentQuestionsTracker.trackSentQuestion(post);
+      logger.info(`✅ Question tracking completed`);
+
       logger.info(
         `🎉 Successfully sent post to all ${channels.length} channel(s)`
       );
@@ -224,5 +239,12 @@ export class TeamsService {
       );
       throw error;
     }
+  }
+
+  /**
+   * Get the sent questions tracker for duplicate detection
+   */
+  getSentQuestionsTracker(): SentQuestionsTracker {
+    return this.sentQuestionsTracker;
   }
 }

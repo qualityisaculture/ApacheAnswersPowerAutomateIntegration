@@ -103,6 +103,48 @@ export class CallbackService {
               ? firstLine.substring(0, 50) + "..."
               : firstLine;
 
+          // Check if this message is a duplicate of a question we recently sent to Teams
+          logger.info(`🔍 Checking for duplicate message: "${messageTitle}"`);
+          logger.info(
+            `📝 Message content preview: "${strippedContent.substring(
+              0,
+              100
+            )}..."`
+          );
+
+          const sentQuestionsTracker =
+            this.teamsService.getSentQuestionsTracker();
+          logger.info(
+            `📊 Tracker stats before check:`,
+            sentQuestionsTracker.getStats()
+          );
+
+          const isDuplicate = sentQuestionsTracker.isDuplicateMessage(
+            messageTitle,
+            strippedContent
+          );
+
+          if (isDuplicate) {
+            logger.info(
+              `🚫 DUPLICATE DETECTED! Skipping message: "${messageTitle}"`
+            );
+            logger.info(
+              `📊 Tracker stats after check:`,
+              sentQuestionsTracker.getStats()
+            );
+            res.status(200).json({
+              success: true,
+              message: "Duplicate message detected and skipped",
+              timestamp: new Date().toISOString(),
+              duplicate: true,
+            });
+            return;
+          } else {
+            logger.info(
+              `✅ No duplicate detected, proceeding with message processing`
+            );
+          }
+
           // Post the Teams message as a question to Apache Answers
           try {
             const questionResponse =
@@ -147,6 +189,10 @@ export class CallbackService {
                 messageId,
                 questionUrl,
                 messageTitle
+              );
+              logger.info(
+                `📊 Tracker stats after processing:`,
+                sentQuestionsTracker.getStats()
               );
             } catch (notificationError) {
               logger.error(
@@ -293,6 +339,8 @@ export class CallbackService {
         message: "Route not found",
         availableRoutes: [
           "/health",
+          "/debug/duplicate-test",
+          "/debug/tracker-status",
           "/callback/power-automate",
           "/callback/teams-message",
         ],

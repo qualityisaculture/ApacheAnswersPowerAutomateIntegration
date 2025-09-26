@@ -98,6 +98,14 @@ export class PostMonitor {
           }
         }
       }
+
+      // Periodically clean up old tracked questions (every 10th check)
+      const cleanupCounter = Math.floor(
+        Date.now() / (config.monitoring.checkIntervalMs * 10)
+      );
+      if (cleanupCounter % 10 === 0) {
+        this.teamsService.getSentQuestionsTracker().clearOldQuestions();
+      }
     } catch (error) {
       logger.error("❌ Error checking for new posts:", error);
     }
