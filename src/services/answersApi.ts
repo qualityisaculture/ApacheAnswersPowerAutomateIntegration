@@ -261,7 +261,7 @@ export class AnswersApiService {
     }
 
     // Enhance the content with Teams context
-    const enhancedContent = `${content}\n\n---\n*Posted from Microsoft Teams*\nTeam ID: ${teamId}\nChannel ID: ${channelId}\nMessage ID: ${messageId}\n[View in Teams](${messageLink})`;
+    const enhancedContent = `${content}\n\n---\n*Posted from Microsoft Teams*\n[View in Teams](${messageLink})`;
 
     logger.info(`📝 Posting Teams message as question: ${title}`);
     logger.info(`🔗 Message Link: ${messageLink}`);

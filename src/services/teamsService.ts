@@ -194,10 +194,10 @@ export class TeamsService {
               },
               {
                 type: "TextBlock",
-                text: questionUrl,
+                text: `[View Question in Apache Answers](${questionUrl})`,
                 weight: "normal",
                 size: "medium",
-                color: "default",
+                color: "accent",
               },
             ],
           },

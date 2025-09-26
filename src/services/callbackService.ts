@@ -94,14 +94,22 @@ export class CallbackService {
             // If item is not JSON, use it as plain text
             messageContent = item || "No content available";
           }
-          const messageTitle = `Teams Message from ${teamId}`;
+
+          // Create title from first line of message, truncated to 50 characters with ellipses
+          // Strip HTML tags from the content first
+          const strippedContent = messageContent.replace(/<[^>]*>/g, "");
+          const firstLine = strippedContent.split("\n")[0].trim();
+          const messageTitle =
+            firstLine.length > 50
+              ? firstLine.substring(0, 50) + "..."
+              : firstLine;
 
           // Post the Teams message as a question to Apache Answers
           try {
             const questionResponse =
               await this.answersApi.postTeamsMessageAsQuestion(
                 messageTitle,
-                messageContent,
+                strippedContent,
                 teamId,
                 channelId,
                 messageId,
