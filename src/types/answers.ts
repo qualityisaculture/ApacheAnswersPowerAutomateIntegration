@@ -109,3 +109,41 @@ export interface AnswerQuestionResponse {
   msg: string;
   reason: string;
 }
+
+export interface Answer {
+  id: string;
+  question_id: string;
+  content: string;
+  html: string;
+  create_time: number;
+  update_time: number;
+  accepted: number;
+  user_info: {
+    id: string;
+    username: string;
+    rank: number;
+    display_name: string;
+    avatar: string;
+    website: string;
+    location: string;
+    language: string;
+    status: string;
+    suspended_until: number;
+  };
+  collected: boolean;
+  vote_status: string;
+  vote_count: number;
+  status: number;
+  member_actions: Array<{
+    action: string;
+    name: string;
+    type: string;
+  }>;
+}
+
+export interface AnswerListResponse {
+  list: Answer[];
+  total: number;
+  page: number;
+  page_size: number;
+}

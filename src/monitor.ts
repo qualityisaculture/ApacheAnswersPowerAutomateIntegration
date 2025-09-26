@@ -1,17 +1,20 @@
 import { AnswersApiService } from "./services/answersApi";
 import { TeamsService } from "./services/teamsService";
+import { AnswerTracker } from "./services/answerTracker";
 import { config } from "./config/config";
 import logger from "./services/logger";
 
 export class PostMonitor {
   private answersApi: AnswersApiService;
   private teamsService: TeamsService;
+  private answerTracker: AnswerTracker;
   private isRunning: boolean = false;
   private intervalId: NodeJS.Timeout | null = null;
 
   constructor() {
     this.answersApi = new AnswersApiService();
     this.teamsService = new TeamsService();
+    this.answerTracker = new AnswerTracker();
   }
 
   /**
@@ -99,6 +102,9 @@ export class PostMonitor {
         }
       }
 
+      // Check for answers on all recent questions
+      await this.checkForAnswers();
+
       // Periodically clean up old tracked questions (every 10th check)
       const cleanupCounter = Math.floor(
         Date.now() / (config.monitoring.checkIntervalMs * 10)
@@ -108,6 +114,58 @@ export class PostMonitor {
       }
     } catch (error) {
       logger.error("❌ Error checking for new posts:", error);
+    }
+  }
+
+  /**
+   * Check for answers on all questions and detect new ones
+   */
+  private async checkForAnswers(): Promise<void> {
+    try {
+      // Get all questions (using a larger page size to get more questions)
+      const allPosts = await this.answersApi.getRecentPosts(1, 100);
+
+      let totalNewAnswers = 0;
+      const newAnswerDetails: string[] = [];
+
+      for (const post of allPosts) {
+        try {
+          const answers = await this.answersApi.getAnswersForQuestion(post.id);
+          const answerIds = answers.map((answer) => answer.id);
+
+          // Update tracking and get new answers
+          const newAnswerIds = this.answerTracker.updateQuestionAnswers(
+            post.id,
+            post.title,
+            answerIds
+          );
+
+          totalNewAnswers += newAnswerIds.length;
+
+          // Collect new answer details
+          if (newAnswerIds.length > 0) {
+            newAnswerDetails.push(
+              `"${post.title}": [${newAnswerIds.join(", ")}]`
+            );
+          }
+        } catch (error) {
+          logger.error(
+            `❌ Failed to fetch answers for question "${post.title}" (ID: ${post.id}):`,
+            error
+          );
+        }
+      }
+
+      if (totalNewAnswers > 0) {
+        logger.info(`🆕 New answers found: ${newAnswerDetails.join(", ")}`);
+      } else {
+        logger.info("No new answers");
+      }
+
+      // Clean up old tracked questions periodically
+      this.answerTracker.cleanupOldQuestions();
+    } catch (error) {
+      logger.error("❌ Error checking for answers:", error);
     }
   }
 

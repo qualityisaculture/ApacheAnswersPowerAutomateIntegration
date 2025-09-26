@@ -7,6 +7,8 @@ import {
   AnswerCommentRequest,
   AnswerQuestionRequest,
   AnswerQuestionResponse,
+  Answer,
+  AnswerListResponse,
 } from "../types/answers";
 import { config } from "../config/config";
 import logger from "./logger";
@@ -265,6 +267,44 @@ export class AnswersApiService {
     logger.info(`🔗 Message Link: ${messageLink}`);
 
     return this.postQuestion(title, enhancedContent, tags);
+  }
+
+  /**
+   * Get answers for a specific question
+   */
+  async getAnswersForQuestion(
+    questionId: string,
+    page: number = 1,
+    pageSize: number = 20,
+    order: string = "newest"
+  ): Promise<Answer[]> {
+    try {
+      const response = await this.client.get<
+        AnswerApiResponse<AnswerListResponse>
+      >(`/answer/api/v1/answer/page`, {
+        params: {
+          question_id: questionId,
+          page,
+          page_size: pageSize,
+          order,
+        },
+      });
+
+      if (response.data.code !== 200) {
+        throw new Error(`API Error: ${response.data.message}`);
+      }
+
+      logger.debug(
+        `Fetched ${response.data.data.list.length} answers for question ${questionId}`
+      );
+      return response.data.data.list;
+    } catch (error) {
+      logger.error(
+        `Failed to fetch answers for question ${questionId}:`,
+        error
+      );
+      throw error;
+    }
   }
 
   /**
