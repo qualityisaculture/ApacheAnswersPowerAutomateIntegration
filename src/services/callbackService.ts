@@ -185,7 +185,7 @@ export class CallbackService {
             // Send notification back to Teams with the question URL
             try {
               const questionUrl = `${config.answers.baseUrl}/questions/${questionId}`;
-              await this.teamsService.sendNewQuestionNotification(
+              await this.teamsService.replyToTeamsMessageWithURL(
                 messageId,
                 questionUrl,
                 messageTitle

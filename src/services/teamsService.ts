@@ -64,14 +64,21 @@ export class TeamsService {
   }
 
   /**
-   * Create a Teams message from an Apache Answers post
+   * Send a post to Teams channels
    */
-  private createTeamsMessage(post: AnswerPost): TeamsMessage {
+  async sendPostToTeams(post: AnswerPost): Promise<void> {
+    const channels = this.findChannelsForPost(post);
+
+    if (channels.length === 0) {
+      logger.info(`📭 No Teams channels configured for post: ${post.title}`);
+      return;
+    }
+
     const postUrl = `${config.answers.baseUrl}/questions/${post.id}`;
     const createdDate = new Date(post.created_at * 1000).toLocaleString(); // Convert from Unix timestamp
     const tagNames = post.tags.map((tag) => tag.display_name).join(", ");
 
-    return {
+    const message: TeamsMessage = {
       type: "message",
       attachments: [
         {
@@ -119,20 +126,6 @@ export class TeamsService {
         },
       ],
     };
-  }
-
-  /**
-   * Send a post to Teams channels
-   */
-  async sendPostToTeams(post: AnswerPost): Promise<void> {
-    const channels = this.findChannelsForPost(post);
-
-    if (channels.length === 0) {
-      logger.info(`📭 No Teams channels configured for post: ${post.title}`);
-      return;
-    }
-
-    const message = this.createTeamsMessage(post);
 
     logger.info(
       `📤 Sending post "${post.title}" to ${channels.length} Teams channel(s)`
@@ -175,12 +168,12 @@ export class TeamsService {
   }
 
   /**
-   * Send a new question notification to Teams with messageId and URL
+   * Reply to a message in Teams with messageId, URL, and additional text
    */
-  async sendNewQuestionNotification(
+  async replyToTeamsMessageWithURL(
     messageId: string,
-    questionUrl: string,
-    questionTitle: string
+    url: string,
+    additionalText: string
   ): Promise<void> {
     if (!config.teams.newPostReplyWebhook) {
       logger.warn(
@@ -209,10 +202,17 @@ export class TeamsService {
               },
               {
                 type: "TextBlock",
-                text: `[View Question in Apache Answers](${questionUrl})`,
+                text: url,
                 weight: "normal",
                 size: "medium",
                 color: "accent",
+              },
+              {
+                type: "TextBlock",
+                text: additionalText,
+                weight: "normal",
+                size: "medium",
+                color: "default",
               },
             ],
           },
@@ -221,9 +221,10 @@ export class TeamsService {
     };
 
     try {
-      logger.info(`📤 Sending new question notification to Teams...`);
+      logger.info(`📤 Sending message reply to Teams...`);
       logger.info(`📨 Message ID: ${messageId}`);
-      logger.info(`🔗 Question URL: ${questionUrl}`);
+      logger.info(`🔗 URL: ${url}`);
+      logger.info(`📝 Additional Text: ${additionalText}`);
 
       await axios.post(config.teams.newPostReplyWebhook, message, {
         headers: {
@@ -231,12 +232,9 @@ export class TeamsService {
         },
       });
 
-      logger.info(`✅ Successfully sent new question notification to Teams`);
+      logger.info(`✅ Successfully sent message reply to Teams`);
     } catch (error) {
-      logger.error(
-        "❌ Failed to send new question notification to Teams:",
-        error
-      );
+      logger.error("❌ Failed to send message reply to Teams:", error);
       throw error;
     }
   }
