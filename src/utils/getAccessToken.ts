@@ -1,4 +1,5 @@
 import axios from "axios";
+import https from "https";
 import { config } from "../config/config";
 import logger from "../services/logger";
 
@@ -57,6 +58,9 @@ export async function getAccessToken(): Promise<string> {
         headers: {
           "Content-Type": "application/json",
         },
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: false,
+        }),
       }
     );
 

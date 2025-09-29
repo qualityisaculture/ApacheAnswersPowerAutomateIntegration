@@ -1,4 +1,5 @@
 import axios from "axios";
+import https from "https";
 import { AnswerPost } from "../types/answers";
 import { ChannelMapping, config } from "../config/config";
 import logger from "./logger";
@@ -139,6 +140,9 @@ export class TeamsService {
             "Content-Type": "application/json",
           },
           timeout: 30000,
+          httpsAgent: new https.Agent({
+            rejectUnauthorized: false,
+          }),
         });
 
         logger.info(`✅ Successfully sent to ${channel.channelName}`);
@@ -230,6 +234,9 @@ export class TeamsService {
         headers: {
           "Content-Type": "application/json",
         },
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: false,
+        }),
       });
 
       logger.info(`✅ Successfully sent message reply to Teams`);

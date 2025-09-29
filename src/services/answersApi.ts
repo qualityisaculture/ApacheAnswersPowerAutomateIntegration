@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from "axios";
+import https from "https";
 import {
   AnswerPost,
   AnswerApiResponse,
@@ -27,6 +28,9 @@ export class AnswersApiService {
           Authorization: `Bearer ${config.answers.accessToken}`,
         }),
       },
+      httpsAgent: new https.Agent({
+        rejectUnauthorized: false,
+      }),
     });
 
     // Add request/response interceptors for logging
