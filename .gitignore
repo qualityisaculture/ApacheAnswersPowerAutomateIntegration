@@ -42,3 +42,4 @@ coverage/
 .Trashes
 ehthumbs.db
 Thumbs.db
+.env_bak
