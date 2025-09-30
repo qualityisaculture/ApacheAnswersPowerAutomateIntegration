@@ -10,6 +10,8 @@ export interface PowerAutomateCallback {
   body: string;
   postId: string;
   timestamp?: string;
+  teamId: string;
+  channelId: string;
 }
 
 export interface TeamsEmojiReactionCallback {
@@ -185,18 +187,17 @@ export class CallbackService {
             `✅ Successfully posted Teams message as question with ID: ${questionId}`
           );
 
-          // Add a comment with the messageId to the question
+          // Add a comment with the messageId, teamId, and channelId to the question
           try {
-            await this.answersApi.postComment(
+            await this.answersApi.postTeamsIdsComment(
               questionId,
-              `Teams Message ID: ${messageId}`
-            );
-            logger.info(
-              `✅ Successfully added messageId comment to question ${questionId}`
+              messageId,
+              teamId,
+              channelId
             );
           } catch (commentError) {
             logger.error(
-              `❌ Failed to add messageId comment to question ${questionId}:`,
+              `❌ Failed to add Teams IDs comment to question ${questionId}:`,
               commentError
             );
             // Don't fail the entire request if comment fails
@@ -317,6 +318,8 @@ export class CallbackService {
             postId: req.query.postId as string,
             timestamp:
               (req.query.timestamp as string) || new Date().toISOString(),
+            teamId: req.query.teamId as string,
+            channelId: req.query.channelId as string,
           };
 
           // Log the callback data
@@ -326,6 +329,8 @@ export class CallbackService {
             body: callbackData.body,
             postId: callbackData.postId,
             timestamp: callbackData.timestamp,
+            teamId: callbackData.teamId,
+            channelId: callbackData.channelId,
           });
 
           // Log detailed information
@@ -336,10 +341,11 @@ export class CallbackService {
 
           if (callbackData.postId) {
             try {
-              // Post a comment to the Apache Answers post with messageId
-              await this.answersApi.postComment(
+              await this.answersApi.postTeamsIdsComment(
                 callbackData.postId,
-                `Teams Message ID: ${callbackData.messageId}`
+                callbackData.messageId,
+                callbackData.teamId,
+                callbackData.channelId
               );
 
               // Post a separate comment with the Teams link

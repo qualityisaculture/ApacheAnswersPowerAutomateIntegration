@@ -180,23 +180,6 @@ export class AnswersApiService {
   }
 
   /**
-   * Post a Teams message link as a comment to a question
-   */
-  async postTeamsMessageComment(
-    questionId: string,
-    messageLink: string,
-    messageId: string
-  ): Promise<AnswerComment> {
-    const commentContent = `[View in Teams](${messageLink})\nTeams Message ID: ${messageId}`;
-
-    logger.info(`📝 Posting Teams message comment to question ${questionId}`);
-    logger.info(`🔗 Message Link: ${messageLink}`);
-    logger.info(`📨 Message ID: ${messageId}`);
-
-    return this.postComment(questionId, commentContent);
-  }
-
-  /**
    * Post a new question to Apache Answers
    */
   async postQuestion(
@@ -347,38 +330,87 @@ export class AnswersApiService {
   }
 
   /**
-   * Extract Teams message ID from question comments
+   * Extract Teams IDs from question comments
    */
-  async getTeamsMessageIdForQuestion(
-    questionId: string
-  ): Promise<string | null> {
+  async getTeamsIdsForQuestion(questionId: string): Promise<{
+    messageId: string | null;
+    teamId: string | null;
+    channelId: string | null;
+  }> {
     try {
       const comments = await this.getCommentsForQuestion(questionId);
 
       // Look for a comment containing "Teams Message ID:"
       for (const comment of comments) {
         if (comment.original_text.includes("Teams Message ID:")) {
-          const match = comment.original_text.match(
+          const messageIdMatch = comment.original_text.match(
             /Teams Message ID:\s*([^\s\n]+)/
           );
-          if (match && match[1]) {
-            logger.debug(
-              `Found Teams message ID for question ${questionId}: ${match[1]}`
-            );
-            return match[1];
-          }
+          const teamIdMatch = comment.original_text.match(
+            /Teams Team ID:\s*([^\s\n]+)/
+          );
+          const channelIdMatch = comment.original_text.match(
+            /Teams Channel ID:\s*([^\s\n]+)/
+          );
+
+          const result = {
+            messageId:
+              messageIdMatch && messageIdMatch[1] ? messageIdMatch[1] : null,
+            teamId: teamIdMatch && teamIdMatch[1] ? teamIdMatch[1] : null,
+            channelId:
+              channelIdMatch && channelIdMatch[1] ? channelIdMatch[1] : null,
+          };
+
+          logger.debug(`Found Teams IDs for question ${questionId}:`, result);
+          return result;
         }
       }
 
-      logger.debug(`No Teams message ID found for question ${questionId}`);
-      return null;
+      logger.debug(`No Teams IDs found for question ${questionId}`);
+      return { messageId: null, teamId: null, channelId: null };
     } catch (error) {
       logger.error(
-        `Failed to extract Teams message ID for question ${questionId}:`,
+        `Failed to extract Teams IDs for question ${questionId}:`,
         error
       );
-      return null;
+      return { messageId: null, teamId: null, channelId: null };
     }
+  }
+
+  /**
+   * Post a comment with Teams IDs to a question
+   */
+  async postTeamsIdsComment(
+    questionId: string,
+    messageId: string,
+    teamId: string,
+    channelId: string
+  ): Promise<void> {
+    try {
+      await this.postComment(
+        questionId,
+        `Teams Message ID: ${messageId}\nTeams Team ID: ${teamId}\nTeams Channel ID: ${channelId}`
+      );
+      logger.info(
+        `✅ Successfully added Teams IDs comment to question ${questionId}`
+      );
+    } catch (error) {
+      logger.error(
+        `❌ Failed to add Teams IDs comment to question ${questionId}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Extract Teams message ID from question comments (legacy method for backward compatibility)
+   */
+  async getTeamsMessageIdForQuestion(
+    questionId: string
+  ): Promise<string | null> {
+    const ids = await this.getTeamsIdsForQuestion(questionId);
+    return ids.messageId;
   }
 
   /**

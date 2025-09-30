@@ -150,9 +150,10 @@ export class PostMonitor {
 
             // Try to reply to the Teams message if this question has one
             try {
-              const teamsMessageId =
-                await this.answersApi.getTeamsMessageIdForQuestion(post.id);
-              if (teamsMessageId) {
+              const teamsIds = await this.answersApi.getTeamsIdsForQuestion(
+                post.id
+              );
+              if (teamsIds.messageId && teamsIds.teamId && teamsIds.channelId) {
                 const answerUrl = `${config.answers.baseUrl}/questions/${post.id}`;
 
                 // Get the actual answer content for the new answers
@@ -170,8 +171,10 @@ export class PostMonitor {
 
                 const answerText = `New answer added:\n\n${answerMessages}`;
 
-                await this.teamsService.replyToTeamsMessageWithURL(
-                  teamsMessageId,
+                await this.teamsService.replyToTeamsMessageWithFullContext(
+                  teamsIds.messageId,
+                  teamsIds.teamId,
+                  teamsIds.channelId,
                   answerUrl,
                   answerText
                 );
@@ -181,7 +184,7 @@ export class PostMonitor {
                 );
               } else {
                 logger.debug(
-                  `No Teams message ID found for question "${post.title}"`
+                  `No complete Teams IDs found for question "${post.title}" (messageId: ${teamsIds.messageId}, teamId: ${teamsIds.teamId}, channelId: ${teamsIds.channelId})`
                 );
               }
             } catch (teamsError) {
