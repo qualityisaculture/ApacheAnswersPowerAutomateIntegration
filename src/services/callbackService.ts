@@ -12,6 +12,18 @@ export interface PowerAutomateCallback {
   timestamp?: string;
 }
 
+export interface TeamsEmojiReactionCallback {
+  messageId: string;
+  messageLink: string;
+  item: string;
+  teamId: string;
+  channelId: string;
+  tag: string;
+  reactionType?: string;
+  reactionCount?: number;
+  timestamp?: string;
+}
+
 export class CallbackService {
   private app: express.Application;
   private server: any;
@@ -49,210 +61,249 @@ export class CallbackService {
       });
     });
 
-    // Teams message callback endpoint
-    this.app.get(
-      "/callback/teams-message",
-      async (req: Request, res: Response) => {
+    // Teams emoji reaction callback endpoint
+    this.app.get("/callback/emoji", async (req: Request, res: Response) => {
+      try {
+        const item = req.query.item as string;
+        const teamId = req.query.teamId as string;
+        const channelId = req.query.channelId as string;
+        const messageId = req.query.messageId as string;
+        const messageLink = req.query.messageLink as string;
+        const tag = req.query.tag as string;
+        const reactionType = req.query.reactionType as string;
+        const reactionCount = req.query.reactionCount as string;
+
+        // Log the received parameters
+        logger.info("😀 Received Teams emoji reaction callback:", {
+          item,
+          teamId,
+          channelId,
+          messageId,
+          messageLink,
+          tag,
+          reactionType,
+          reactionCount,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Log detailed information
+        logger.info(`📦 Item: ${JSON.stringify(item, null, 2)}`);
+        logger.info(`👥 Team ID: ${teamId}`);
+        logger.info(`💬 Channel ID: ${channelId}`);
+        logger.info(`📨 Message ID: ${messageId}`);
+        logger.info(`🔗 Message Link: ${messageLink}`);
+        logger.info(`🏷️ Tag: ${tag || "No tag provided"}`);
+        logger.info(
+          `😀 Reaction Type: ${reactionType || "No reaction type provided"}`
+        );
+        logger.info(
+          `🔢 Reaction Count: ${reactionCount || "No count provided"}`
+        );
+
+        // Extract message content from item (item is a string from query params)
+        let messageContent = "No content available";
         try {
-          const item = req.query.item as string;
-          const teamId = req.query.teamId as string;
-          const channelId = req.query.channelId as string;
-          const messageId = req.query.messageId as string;
-          const messageLink = req.query.messageLink as string;
-          const tag = req.query.tag as string;
+          const itemObj = JSON.parse(item);
+          messageContent =
+            itemObj?.body?.content ||
+            itemObj?.text ||
+            item ||
+            "No content available";
+        } catch {
+          // If item is not JSON, use it as plain text
+          messageContent = item || "No content available";
+        }
 
-          // Log the received parameters
-          logger.info("📨 Received Teams message callback:", {
-            item,
-            teamId,
-            channelId,
-            messageId,
-            messageLink,
-            tag,
-            timestamp: new Date().toISOString(),
-          });
+        // Create title from first line of message, truncated to 50 characters with ellipses
+        // Strip HTML tags from the content first
+        const strippedContent = messageContent.replace(/<[^>]*>/g, "");
+        const firstLine = strippedContent.split("\n")[0].trim();
+        const messageTitle =
+          firstLine.length > 50
+            ? firstLine.substring(0, 50) + "..."
+            : firstLine;
 
-          // Log detailed information
-          logger.info(`📦 Item: ${JSON.stringify(item, null, 2)}`);
-          logger.info(`👥 Team ID: ${teamId}`);
-          logger.info(`💬 Channel ID: ${channelId}`);
-          logger.info(`📨 Message ID: ${messageId}`);
-          logger.info(`🔗 Message Link: ${messageLink}`);
-          logger.info(`🏷️ Tag: ${tag || "No tag provided"}`);
+        // Check if this message is a duplicate of a question we recently sent to Teams
+        logger.info(`🔍 Checking for duplicate message: "${messageTitle}"`);
+        logger.info(
+          `📝 Message content preview: "${strippedContent.substring(
+            0,
+            100
+          )}..."`
+        );
 
-          // Extract message content from item (item is a string from query params)
-          let messageContent = "No content available";
-          try {
-            const itemObj = JSON.parse(item);
-            messageContent =
-              itemObj?.body?.content ||
-              itemObj?.text ||
-              item ||
-              "No content available";
-          } catch {
-            // If item is not JSON, use it as plain text
-            messageContent = item || "No content available";
-          }
+        const sentQuestionsTracker =
+          this.teamsService.getSentQuestionsTracker();
+        logger.info(
+          `📊 Tracker stats before check:`,
+          sentQuestionsTracker.getStats()
+        );
 
-          // Create title from first line of message, truncated to 50 characters with ellipses
-          // Strip HTML tags from the content first
-          const strippedContent = messageContent.replace(/<[^>]*>/g, "");
-          const firstLine = strippedContent.split("\n")[0].trim();
-          const messageTitle =
-            firstLine.length > 50
-              ? firstLine.substring(0, 50) + "..."
-              : firstLine;
+        const isDuplicate = sentQuestionsTracker.isDuplicateMessage(
+          messageTitle,
+          strippedContent
+        );
 
-          // Check if this message is a duplicate of a question we recently sent to Teams
-          logger.info(`🔍 Checking for duplicate message: "${messageTitle}"`);
+        if (isDuplicate) {
           logger.info(
-            `📝 Message content preview: "${strippedContent.substring(
-              0,
-              100
-            )}..."`
+            `🚫 DUPLICATE DETECTED! Skipping message: "${messageTitle}"`
           );
-
-          const sentQuestionsTracker =
-            this.teamsService.getSentQuestionsTracker();
           logger.info(
-            `📊 Tracker stats before check:`,
+            `📊 Tracker stats after check:`,
             sentQuestionsTracker.getStats()
           );
+          res.status(200).json({
+            success: true,
+            message: "Duplicate message detected and skipped",
+            timestamp: new Date().toISOString(),
+            duplicate: true,
+          });
+          return;
+        } else {
+          logger.info(
+            `✅ No duplicate detected, proceeding with message processing`
+          );
+        }
 
-          const isDuplicate = sentQuestionsTracker.isDuplicateMessage(
-            messageTitle,
-            strippedContent
+        // Post the Teams message as a question to Apache Answers
+        try {
+          const questionResponse =
+            await this.answersApi.postTeamsMessageAsQuestion(
+              messageTitle,
+              strippedContent,
+              teamId,
+              channelId,
+              messageId,
+              messageLink,
+              tag
+            );
+
+          // Extract the question ID from the response
+          const questionId = questionResponse.data.id;
+
+          logger.info(
+            `✅ Successfully posted Teams message as question with ID: ${questionId}`
           );
 
-          if (isDuplicate) {
-            logger.info(
-              `🚫 DUPLICATE DETECTED! Skipping message: "${messageTitle}"`
+          // Add a comment with the messageId to the question
+          try {
+            await this.answersApi.postComment(
+              questionId,
+              `Teams Message ID: ${messageId}`
             );
             logger.info(
-              `📊 Tracker stats after check:`,
-              sentQuestionsTracker.getStats()
+              `✅ Successfully added messageId comment to question ${questionId}`
             );
-            res.status(200).json({
-              success: true,
-              message: "Duplicate message detected and skipped",
-              timestamp: new Date().toISOString(),
-              duplicate: true,
-            });
-            return;
-          } else {
-            logger.info(
-              `✅ No duplicate detected, proceeding with message processing`
+          } catch (commentError) {
+            logger.error(
+              `❌ Failed to add messageId comment to question ${questionId}:`,
+              commentError
             );
+            // Don't fail the entire request if comment fails
           }
 
-          // Post the Teams message as a question to Apache Answers
-          try {
-            const questionResponse =
-              await this.answersApi.postTeamsMessageAsQuestion(
-                messageTitle,
-                strippedContent,
-                teamId,
-                channelId,
-                messageId,
-                messageLink,
-                tag
-              );
-
-            // Extract the question ID from the response
-            const questionId = questionResponse.data.id;
-
-            logger.info(
-              `✅ Successfully posted Teams message as question with ID: ${questionId}`
-            );
-
-            // Add a comment with the messageId to the question
+          // Add a comment about the emoji reaction that triggered this
+          if (reactionType) {
             try {
               await this.answersApi.postComment(
                 questionId,
-                `Teams Message ID: ${messageId}`
+                `Triggered by emoji reaction: ${reactionType}${
+                  reactionCount ? ` (${reactionCount} reactions)` : ""
+                }`
               );
               logger.info(
-                `✅ Successfully added messageId comment to question ${questionId}`
+                `✅ Successfully added emoji reaction comment to question ${questionId}`
               );
             } catch (commentError) {
               logger.error(
-                `❌ Failed to add messageId comment to question ${questionId}:`,
+                `❌ Failed to add emoji reaction comment to question ${questionId}:`,
                 commentError
               );
               // Don't fail the entire request if comment fails
             }
-
-            // Send notification back to Teams with the question URL
-            try {
-              const questionUrl = `${config.answers.baseUrl}/questions/${questionId}`;
-              await this.teamsService.replyToTeamsMessageWithURL(
-                messageId,
-                questionUrl,
-                messageTitle
-              );
-              logger.info(
-                `📊 Tracker stats after processing:`,
-                sentQuestionsTracker.getStats()
-              );
-            } catch (notificationError) {
-              logger.error(
-                `❌ Failed to send Teams notification:`,
-                notificationError
-              );
-              // Don't fail the entire request if notification fails
-            }
-
-            // Respond with success
-            res.status(200).json({
-              success: true,
-              message: "Teams message posted as question successfully",
-              timestamp: new Date().toISOString(),
-              questionId: questionId,
-              receivedData: {
-                item,
-                teamId,
-                channelId,
-                messageId,
-                messageLink,
-                tag,
-              },
-            });
-          } catch (questionError) {
-            logger.error(
-              `❌ Failed to post Teams message as question:`,
-              questionError
-            );
-
-            // Still respond with success for the callback, but indicate the question posting failed
-            res.status(200).json({
-              success: true,
-              message:
-                "Teams message callback received but failed to post as question",
-              timestamp: new Date().toISOString(),
-              error:
-                questionError instanceof Error
-                  ? questionError.message
-                  : "Unknown error",
-              receivedData: {
-                item,
-                teamId,
-                channelId,
-                messageId,
-                messageLink,
-                tag,
-              },
-            });
           }
-        } catch (error) {
-          logger.error("❌ Error processing Teams message callback:", error);
-          res.status(500).json({
-            success: false,
-            message: "Error processing Teams message callback",
-            error: error instanceof Error ? error.message : "Unknown error",
+
+          // Send notification back to Teams with the question URL
+          try {
+            const questionUrl = `${config.answers.baseUrl}/questions/${questionId}`;
+            await this.teamsService.replyToTeamsMessageWithFullContext(
+              messageId,
+              teamId,
+              channelId,
+              questionUrl,
+              `Teams message posted as question successfully${
+                reactionType ? ` (triggered by ${reactionType} reaction)` : ""
+              }`
+            );
+            logger.info(
+              `📊 Tracker stats after processing:`,
+              sentQuestionsTracker.getStats()
+            );
+          } catch (notificationError) {
+            logger.error(
+              `❌ Failed to send Teams notification:`,
+              notificationError
+            );
+            // Don't fail the entire request if notification fails
+          }
+
+          // Respond with success
+          res.status(200).json({
+            success: true,
+            message: "Teams message posted as question successfully",
+            timestamp: new Date().toISOString(),
+            questionId: questionId,
+            receivedData: {
+              item,
+              teamId,
+              channelId,
+              messageId,
+              messageLink,
+              tag,
+              reactionType,
+              reactionCount,
+            },
+          });
+        } catch (questionError) {
+          logger.error(
+            `❌ Failed to post Teams message as question:`,
+            questionError
+          );
+
+          // Still respond with success for the callback, but indicate the question posting failed
+          res.status(200).json({
+            success: true,
+            message:
+              "Teams emoji reaction callback received but failed to post as question",
+            timestamp: new Date().toISOString(),
+            error:
+              questionError instanceof Error
+                ? questionError.message
+                : "Unknown error",
+            receivedData: {
+              item,
+              teamId,
+              channelId,
+              messageId,
+              messageLink,
+              tag,
+              reactionType,
+              reactionCount,
+            },
           });
         }
+      } catch (error) {
+        logger.error(
+          "❌ Error processing Teams emoji reaction callback:",
+          error
+        );
+        res.status(500).json({
+          success: false,
+          message: "Error processing Teams emoji reaction callback",
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
       }
-    );
+    });
 
     // Power Automate callback endpoint
     this.app.get(
@@ -343,6 +394,7 @@ export class CallbackService {
           "/debug/tracker-status",
           "/callback/power-automate",
           "/callback/teams-message",
+          "/callback/emoji",
         ],
       });
     });
@@ -361,6 +413,9 @@ export class CallbackService {
           );
           logger.info(
             `💬 Teams message callback endpoint available at: http://localhost:${this.port}/callback/teams-message`
+          );
+          logger.info(
+            `😀 Teams emoji reaction callback endpoint available at: http://localhost:${this.port}/callback/emoji`
           );
           logger.info(
             `❤️  Health check available at: http://localhost:${this.port}/health`

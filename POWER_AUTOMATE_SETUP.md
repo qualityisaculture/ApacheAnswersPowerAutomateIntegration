@@ -1,21 +1,21 @@
-# Power Automate Setup for Teams Message Callbacks
+# Power Automate Setup for Teams Emoji Reaction Callbacks
 
-This document explains how to set up a Power Automate flow that will send HTTP callbacks to your application after a message is posted to Teams.
+This document explains how to set up a Power Automate flow that will send HTTP callbacks to your application when an emoji reaction is added to a message in Teams.
 
 ## Overview
 
 The flow will:
 
-1. Trigger when a message is posted to a Teams channel
-2. Extract the message details (ID, conversation ID, link, and body)
+1. Trigger when an emoji reaction is added to a message in a Teams channel
+2. Extract the message details (ID, conversation ID, link, and body) along with reaction information
 3. Send an HTTP GET request to your application's callback endpoint
-4. Your application will automatically post a comment to the original Apache Answers post with the Teams message link and IDs
+4. Your application will automatically post the message as a question to Apache Answers and respond with a link
 
 ## Prerequisites
 
 - Access to Power Automate (Microsoft 365 license)
 - Your application running and accessible via HTTP
-- The callback endpoint URL (default: `http://localhost:3000/callback/power-automate`)
+- The callback endpoint URL (default: `http://localhost:3000/callback/emoji`)
 
 ## Step-by-Step Setup
 
@@ -23,25 +23,26 @@ The flow will:
 
 1. Go to [Power Automate](https://flow.microsoft.com)
 2. Click **"Create"** → **"Automated cloud flow"**
-3. Name your flow: `Teams Message Callback`
-4. Choose **"When a message is posted (V3)"** as the trigger
+3. Name your flow: `Teams Emoji Reaction Callback`
+4. Choose **"When someone reacted to a message in chat"** as the trigger
 5. Click **"Create"**
 
 ### 2. Configure the Trigger
 
 1. In the trigger step, select your Teams team and channel
-2. You can leave the other settings as default
-3. Click **"Show advanced options"** if you want to filter by specific conditions
+2. Set **Message type** to **Channel** (to monitor channel messages)
+3. You can leave the other settings as default
+4. Click **"Show advanced options"** if you want to filter by specific conditions
 
-### 3. Add Compose Action to Extract Post ID
+### 3. Add Compose Action to Extract Message Content
 
 1. Click **"+ New step"**
 2. Search for **"Compose"** and select **"Compose"** action
 3. Configure the Compose action:
-   - **Inputs**: `@{last(split(triggerBody()?['body']?['content'], ' '))}`
-   - **Name**: `ExtractPostId`
+   - **Inputs**: `@{triggerBody()?['message']?['body']?['content']}`
+   - **Name**: `ExtractMessageContent`
 
-This extracts the Post ID from the last word in the message body (the Post ID appears as the last text block).
+This extracts the message content that was reacted to.
 
 ### 4. Add HTTP Request Action
 
@@ -49,15 +50,18 @@ This extracts the Post ID from the last word in the message body (the Post ID ap
 2. Search for **"HTTP"** and select **"HTTP"** action
 3. Configure the HTTP action:
    - **Method**: `GET`
-   - **URI**: `http://your-server:3000/callback/power-automate`
+   - **URI**: `http://your-server:3000/callback/emoji`
      - Replace `your-server` with your actual server address
-     - If running locally, use `http://localhost:3000/callback/power-automate`
+     - If running locally, use `http://localhost:3000/callback/emoji`
    - **Query Parameters**: Add the following parameters:
-     - `messageId`: `@{triggerBody()?['id']}`
-     - `conversationId`: `@{triggerBody()?['conversationId']}`
-     - `messageLink`: `@{triggerBody()?['link']}`
-     - `body`: `@{triggerBody()?['body']?['content']}`
-     - `postId`: `@{outputs('ExtractPostId')}`
+     - `item`: `@{outputs('ExtractMessageContent')}`
+     - `teamId`: `@{triggerBody()?['teamId']}`
+     - `channelId`: `@{triggerBody()?['channelId']}`
+     - `messageId`: `@{triggerBody()?['message']?['id']}`
+     - `messageLink`: `@{triggerBody()?['message']?['link']}`
+     - `tag`: `from_teams` (or your preferred tag)
+     - `reactionType`: `@{triggerBody()?['reactionType']}`
+     - `reactionCount`: `@{triggerBody()?['reactionCount']}`
      - `timestamp`: `@{utcNow()}`
 
 ### 5. Add Error Handling (Optional but Recommended)
@@ -70,7 +74,7 @@ This extracts the Post ID from the last word in the message body (the Post ID ap
 
 1. Click **"Save"** to save your flow
 2. Click **"Test"** to test the flow
-3. Post a message in the configured Teams channel
+3. Add an emoji reaction to a message in the configured Teams channel
 4. Check your application logs to see if the callback was received
 
 ## Expected Callback Data Structure
@@ -78,34 +82,40 @@ This extracts the Post ID from the last word in the message body (the Post ID ap
 Your application will receive query parameters with the following structure:
 
 ```
-GET /callback/power-automate?messageId=1234567890123456789&conversationId=19:conversation-id@thread.skype&messageLink=https://teams.microsoft.com/l/message/...&body=The%20actual%20message%20content&postId=abc123&timestamp=2024-01-15T10:30:00.000Z
+GET /callback/emoji?item=The%20actual%20message%20content&teamId=team-id&channelId=channel-id&messageId=1234567890123456789&messageLink=https://teams.microsoft.com/l/message/...&tag=from_teams&reactionType=👍&reactionCount=1&timestamp=2024-01-15T10:30:00.000Z
 ```
 
 The parameters will be:
 
+- `item`: The message content that was reacted to (URL encoded)
+- `teamId`: The Teams team ID
+- `channelId`: The Teams channel ID
 - `messageId`: The Teams message ID
-- `conversationId`: The Teams conversation ID
 - `messageLink`: The direct link to the Teams message
-- `body`: The message content (URL encoded)
-- `postId`: The Apache Answers Post ID (extracted from the message body)
+- `tag`: The tag to apply to the question (e.g., "from_teams")
+- `reactionType`: The emoji that was used for the reaction
+- `reactionCount`: The number of reactions of this type
 - `timestamp`: When the callback was sent
 
-## Automatic Comment Posting
+## Automatic Question Creation
 
 When your application receives a callback, it will:
 
-1. **Extract the Apache Answers Post ID** from the message body (included in the Teams message)
-2. **Post a comment** to the original Apache Answers post with:
-   - **First line**: The Teams message link
-   - **Second line**: `Message Id: {messageId}`
-   - **Third line**: `Conversation Id: {conversationId}`
+1. **Extract the message content** from the Teams message that was reacted to
+2. **Create a new question** in Apache Answers with:
+   - **Title**: First line of the message (truncated to 50 characters)
+   - **Content**: Full message content
+   - **Tags**: Including the specified tag (e.g., "from_teams")
+3. **Add comments** to the question with:
+   - **Teams Message ID**: For tracking
+   - **Emoji reaction info**: Which emoji triggered the creation
+4. **Reply to Teams** with a link to the created question
 
-Example comment that will be posted:
+Example comments that will be posted:
 
 ```
-https://teams.microsoft.com/l/message/...
-Message Id: 1234567890123456789
-Conversation Id: 19:conversation-id@thread.skype
+Teams Message ID: 1234567890123456789
+Triggered by emoji reaction: 👍 (1 reactions)
 ```
 
 ## Environment Variables
@@ -150,7 +160,7 @@ Expected response:
 ### 3. Test the Callback Endpoint
 
 ```bash
-curl "http://localhost:3000/callback/power-automate?messageId=test-123&conversationId=test-conversation&messageLink=https://teams.microsoft.com/test&body=Test%20message&postId=abc123&timestamp=2024-01-15T10:30:00.000Z"
+curl "http://localhost:3000/callback/emoji?item=Test%20message&teamId=test-team&channelId=test-channel&messageId=test-123&messageLink=https://teams.microsoft.com/test&tag=from_teams&reactionType=👍&reactionCount=1&timestamp=2024-01-15T10:30:00.000Z"
 ```
 
 Expected response:
@@ -158,8 +168,9 @@ Expected response:
 ```json
 {
   "success": true,
-  "message": "Callback received and logged successfully",
-  "timestamp": "2024-01-15T10:30:00.000Z"
+  "message": "Teams message posted as question successfully",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "questionId": "12345"
 }
 ```
 
@@ -182,12 +193,14 @@ Your application will log:
 
 Look for these log entries:
 
-- `📥 Incoming POST request to /callback/power-automate`
-- `🔄 Received Power Automate callback:`
+- `📥 Incoming GET request to /callback/emoji`
+- `😀 Received Teams emoji reaction callback:`
 - `📨 Message ID: ...`
-- `💬 Conversation ID: ...`
+- `👥 Team ID: ...`
+- `💬 Channel ID: ...`
 - `🔗 Message Link: ...`
-- `📝 Message Body: ...`
+- `😀 Reaction Type: ...`
+- `🔢 Reaction Count: ...`
 
 ## Security Considerations
 
@@ -198,9 +211,10 @@ Look for these log entries:
 
 ## Next Steps
 
-Once the basic callback logging is working, you can extend the functionality to:
+Once the emoji reaction callback is working, you can extend the functionality to:
 
-- Store callback data in a database
-- Add the message link as a comment to Apache Answers posts
-- Implement more sophisticated message processing
+- Filter reactions by specific emojis (e.g., only react to 👍 or ❓)
+- Add more sophisticated message processing
+- Implement reaction-based tagging (different emojis = different tags)
 - Add webhook signature verification for security
+- Store reaction analytics in a database

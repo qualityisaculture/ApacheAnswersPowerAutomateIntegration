@@ -172,6 +172,99 @@ export class TeamsService {
   }
 
   /**
+   * Reply to a message in Teams with messageId, teamId, channelId, URL, and additional text
+   */
+  async replyToTeamsMessageWithFullContext(
+    messageId: string,
+    teamId: string,
+    channelId: string,
+    url: string,
+    additionalText: string
+  ): Promise<void> {
+    if (!config.teams.newPostReplyWebhook) {
+      logger.warn(
+        "⚠️ No new post reply webhook configured, skipping notification"
+      );
+      return;
+    }
+
+    const message: TeamsMessage = {
+      type: "message",
+      attachments: [
+        {
+          contentType: "application/vnd.microsoft.card.adaptive",
+          contentUrl: null,
+          content: {
+            $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
+            type: "AdaptiveCard",
+            version: "1.2",
+            body: [
+              {
+                type: "TextBlock",
+                text: messageId,
+                weight: "bolder",
+                size: "medium",
+                color: "accent",
+              },
+              {
+                type: "TextBlock",
+                text: teamId,
+                weight: "normal",
+                size: "small",
+                color: "light",
+              },
+              {
+                type: "TextBlock",
+                text: channelId,
+                weight: "normal",
+                size: "small",
+                color: "light",
+              },
+              {
+                type: "TextBlock",
+                text: url,
+                weight: "normal",
+                size: "medium",
+                color: "accent",
+              },
+              {
+                type: "TextBlock",
+                text: additionalText,
+                weight: "normal",
+                size: "medium",
+                color: "default",
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    try {
+      logger.info(`📤 Sending message reply to Teams...`);
+      logger.info(`📨 Message ID: ${messageId}`);
+      logger.info(`👥 Team ID: ${teamId}`);
+      logger.info(`💬 Channel ID: ${channelId}`);
+      logger.info(`🔗 URL: ${url}`);
+      logger.info(`📝 Additional Text: ${additionalText}`);
+
+      await axios.post(config.teams.newPostReplyWebhook, message, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: false,
+        }),
+      });
+
+      logger.info(`✅ Successfully sent message reply to Teams`);
+    } catch (error) {
+      logger.error("❌ Failed to send message reply to Teams:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Reply to a message in Teams with messageId, URL, and additional text
    */
   async replyToTeamsMessageWithURL(

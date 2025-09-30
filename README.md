@@ -7,12 +7,13 @@ A bidirectional integration tool that synchronizes posts between Apache Answers 
 This tool enables seamless communication between Apache Answers and Microsoft Teams by:
 
 - **Answers → Teams**: When someone creates a post in Apache Answers, it automatically posts to a designated Teams channel
-- **Teams → Answers**: When someone posts in the Teams channel, it creates a corresponding post in Apache Answers
+- **Teams → Answers**: When someone adds an emoji reaction to a message in Teams, it creates a corresponding question in Apache Answers
 
 ## Features
 
 - Bidirectional synchronization between Apache Answers and Microsoft Teams
 - Real-time post notifications
+- Emoji reaction-based question creation
 - Automated content formatting
 - Error handling and logging
 - Configurable channel and forum mappings
