@@ -208,6 +208,30 @@ The application creates log files in the `logs/` directory:
 
 Console output includes colored, formatted logs for easy monitoring.
 
+## Production Deployment
+
+For production deployment on Ubuntu as a systemd service, see the **[deployment directory](./deployment/README.md)**.
+
+### Quick Deployment
+
+```bash
+# On your Ubuntu server
+cd /opt/ApacheAnswersPowerAutomateIntegration/deployment
+sudo ./install-systemd.sh
+```
+
+This will:
+- Create a dedicated `apache-answers-bot` system user
+- Install the service as `apache-answers-bot`
+- Set up FHS-compliant logging in `/var/log/apache-answers-bot/`
+- Configure automatic log rotation
+- Enable the service to start on boot
+
+For detailed instructions, troubleshooting, and configuration options, see:
+- **[Deployment Guide](./deployment/SYSTEMD_DEPLOYMENT.md)** - Complete installation guide
+- **[Quick Reference](./deployment/SYSTEMD_QUICKREF.md)** - Common commands
+- **[Logging Setup](./deployment/LOGGING_SETUP.md)** - Log configuration details
+
 ## Contributing
 
 This project is in early development. Please check back for contribution guidelines.

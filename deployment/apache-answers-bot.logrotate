@@ -1,0 +1,47 @@
+# Logrotate configuration for Apache Answers Teams Integration
+# This file should be copied to /etc/logrotate.d/apache-answers-bot
+
+/var/log/apache-answers-bot/*.log {
+    # Rotate daily
+    daily
+
+    # Keep 5 days of logs
+    rotate 5
+
+    # Compress rotated logs (saves disk space)
+    compress
+
+    # Delay compression until next rotation (allows continued writing)
+    delaycompress
+
+    # Don't error if log file is missing
+    missingok
+
+    # Don't rotate if log is empty
+    notifempty
+
+    # Create new log file with specified permissions
+    create 0644 apache-answers-bot apache-answers-bot
+
+    # Use date as suffix instead of number
+    dateext
+    dateformat -%Y%m%d
+
+    # Truncate original log file after creating a copy (safer than copytruncate)
+    copytruncate
+
+    # Run post-rotation script
+    postrotate
+        # Optionally signal the application to reopen log files
+        # systemctl reload apache-answers-bot 2>/dev/null || true
+    endscript
+
+    # Set maximum age (delete logs older than 30 days)
+    maxage 30
+
+    # Only rotate if file size exceeds 100M (in addition to daily)
+    size 100M
+}
+
+# Separate handling for journald logs if needed
+# Note: journald has its own retention policy in /etc/systemd/journald.conf
