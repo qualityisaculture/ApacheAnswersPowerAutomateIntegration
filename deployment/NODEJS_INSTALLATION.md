@@ -83,7 +83,7 @@ which node
 
 Update the service file's `ExecStart` line:
 ```ini
-ExecStart=/home/youruser/.nvm/versions/node/v20.10.0/bin/node /opt/ApacheAnswersPowerAutomateIntegration/dist/index.js
+ExecStart=/home/youruser/.nvm/versions/node/v20.10.0/bin/node /opt/apache-answers-bot/dist/index.js
 ```
 
 **Cons:**
@@ -158,7 +158,7 @@ After system-wide Node.js installation:
 
 ```bash
 # Navigate to application
-cd /opt/ApacheAnswersPowerAutomateIntegration
+cd /opt/apache-answers-bot
 
 # Install dependencies (will use system Node.js)
 npm ci --only=production
@@ -192,7 +192,7 @@ ls -la /usr/local/bin/node
 
 **Solution:**
 ```bash
-cd /opt/ApacheAnswersPowerAutomateIntegration
+cd /opt/apache-answers-bot
 sudo rm -rf node_modules package-lock.json
 npm ci --only=production
 npm run build

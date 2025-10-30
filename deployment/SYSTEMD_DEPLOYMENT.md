@@ -12,7 +12,7 @@ This deployment uses the **Filesystem Hierarchy Standard (FHS)** for log storage
     ├── error.log
     └── (rotated logs)
 
-/opt/ApacheAnswersPowerAutomateIntegration/logs/  <- Symlink to /var/log/apache-answers-bot
+/opt/apache-answers-bot/logs/  <- Symlink to /var/log/apache-answers-bot
 ```
 
 **Why this approach?**
@@ -25,7 +25,7 @@ This deployment uses the **Filesystem Hierarchy Standard (FHS)** for log storage
 
 - Ubuntu 18.04 or newer
 - Node.js installed (v16 or higher)
-- Application deployed to `/opt/ApacheAnswersPowerAutomateIntegration`
+- Application deployed to `/opt/apache-answers-bot`
 - Root or sudo access
 
 ## Deployment Steps
@@ -46,7 +46,7 @@ sudo useradd --system --no-create-home --shell /bin/false apache-answers-bot
 
 ```bash
 # Ensure the application is in the correct location
-cd /opt/ApacheAnswersPowerAutomateIntegration
+cd /opt/apache-answers-bot
 
 # Install dependencies
 sudo npm ci --only=production
@@ -58,15 +58,15 @@ sudo npm run build
 sudo mkdir -p logs
 
 # Set ownership to the service user
-sudo chown -R apache-answers-bot:apache-answers-bot /opt/ApacheAnswersPowerAutomateIntegration
+sudo chown -R apache-answers-bot:apache-answers-bot /opt/apache-answers-bot
 
 # Set appropriate permissions
-sudo chmod 755 /opt/ApacheAnswersPowerAutomateIntegration
-sudo chmod 755 /opt/ApacheAnswersPowerAutomateIntegration/dist
-sudo chmod 775 /opt/ApacheAnswersPowerAutomateIntegration/logs
+sudo chmod 755 /opt/apache-answers-bot
+sudo chmod 755 /opt/apache-answers-bot/dist
+sudo chmod 775 /opt/apache-answers-bot/logs
 
 # Secure the .env file (contains sensitive data)
-sudo chmod 600 /opt/ApacheAnswersPowerAutomateIntegration/.env
+sudo chmod 600 /opt/apache-answers-bot/.env
 ```
 
 ### 3. Configure Environment Variables
@@ -74,7 +74,7 @@ sudo chmod 600 /opt/ApacheAnswersPowerAutomateIntegration/.env
 Ensure your `.env` file is properly configured:
 
 ```bash
-sudo nano /opt/ApacheAnswersPowerAutomateIntegration/.env
+sudo nano /opt/apache-answers-bot/.env
 ```
 
 Verify all required environment variables are set (see `env.example` for reference).
@@ -83,7 +83,7 @@ Verify all required environment variables are set (see `env.example` for referen
 
 ```bash
 # Copy the service file to systemd directory
-sudo cp /opt/ApacheAnswersPowerAutomateIntegration/apache-answers-bot.service \
+sudo cp /opt/apache-answers-bot/apache-answers-bot.service \
     /etc/systemd/system/apache-answers-bot.service
 
 # Reload systemd to recognize the new service
@@ -97,7 +97,7 @@ sudo systemctl enable apache-answers-bot.service
 
 ```bash
 # Copy logrotate configuration
-sudo cp /opt/ApacheAnswersPowerAutomateIntegration/apache-answers-bot.logrotate \
+sudo cp /opt/apache-answers-bot/apache-answers-bot.logrotate \
     /etc/logrotate.d/apache-answers-bot
 
 # Set correct permissions
@@ -151,7 +151,7 @@ sudo systemctl status apache-answers-bot.service
 sudo journalctl -u apache-answers-bot.service -f
 
 # View application logs (Winston logs)
-sudo tail -f /opt/ApacheAnswersPowerAutomateIntegration/logs/combined.log
+sudo tail -f /opt/apache-answers-bot/logs/combined.log
 ```
 
 ## Service Management Commands
@@ -210,8 +210,8 @@ sudo tail -f /var/log/apache-answers-bot/combined.log
 sudo tail -f /var/log/apache-answers-bot/error.log
 
 # Or via symlink (same logs)
-sudo tail -f /opt/ApacheAnswersPowerAutomateIntegration/logs/combined.log
-sudo tail -f /opt/ApacheAnswersPowerAutomateIntegration/logs/error.log
+sudo tail -f /opt/apache-answers-bot/logs/combined.log
+sudo tail -f /opt/apache-answers-bot/logs/error.log
 
 # View rotated logs
 sudo ls -lh /var/log/apache-answers-bot/
@@ -230,13 +230,13 @@ sudo systemctl status apache-answers-bot -l
 sudo journalctl -u apache-answers-bot -n 50 --no-pager
 
 # Check if the executable exists
-ls -l /opt/ApacheAnswersPowerAutomateIntegration/dist/index.js
+ls -l /opt/apache-answers-bot/dist/index.js
 
 # Check permissions
-sudo ls -la /opt/ApacheAnswersPowerAutomateIntegration
+sudo ls -la /opt/apache-answers-bot
 
 # Test running manually as the service user
-sudo -u apache-answers-bot /usr/bin/node /opt/ApacheAnswersPowerAutomateIntegration/dist/index.js
+sudo -u apache-answers-bot /usr/bin/node /opt/apache-answers-bot/dist/index.js
 ```
 
 ### Common Issues
@@ -244,11 +244,11 @@ sudo -u apache-answers-bot /usr/bin/node /opt/ApacheAnswersPowerAutomateIntegrat
 **1. Permission Denied**
 ```bash
 # Fix ownership
-sudo chown -R apache-answers-bot:apache-answers-bot /opt/ApacheAnswersPowerAutomateIntegration
+sudo chown -R apache-answers-bot:apache-answers-bot /opt/apache-answers-bot
 
 # Fix .env permissions
-sudo chmod 600 /opt/ApacheAnswersPowerAutomateIntegration/.env
-sudo chown apache-answers-bot:apache-answers-bot /opt/ApacheAnswersPowerAutomateIntegration/.env
+sudo chmod 600 /opt/apache-answers-bot/.env
+sudo chown apache-answers-bot:apache-answers-bot /opt/apache-answers-bot/.env
 ```
 
 **2. Port Already in Use**
@@ -264,14 +264,14 @@ sudo ss -tlnp | grep 3000
 **3. Module Not Found**
 ```bash
 # Reinstall dependencies
-cd /opt/ApacheAnswersPowerAutomateIntegration
+cd /opt/apache-answers-bot
 sudo -u apache-answers-bot npm ci --only=production
 ```
 
 **4. Environment Variables Not Loading**
 ```bash
 # Verify .env file exists and is readable
-sudo ls -la /opt/ApacheAnswersPowerAutomateIntegration/.env
+sudo ls -la /opt/apache-answers-bot/.env
 
 # Check service file has correct EnvironmentFile path
 sudo cat /etc/systemd/system/apache-answers-bot.service | grep EnvironmentFile
@@ -303,7 +303,7 @@ When deploying updates:
 
 ```bash
 # 1. Navigate to application directory
-cd /opt/ApacheAnswersPowerAutomateIntegration
+cd /opt/apache-answers-bot
 
 # 2. Pull latest code (if using git)
 sudo -u apache-answers-bot git pull
@@ -332,7 +332,7 @@ Install mail utilities:
 sudo apt-get install mailutils
 ```
 
-Create monitoring script at `/opt/ApacheAnswersPowerAutomateIntegration/monitor.sh`:
+Create monitoring script at `/opt/apache-answers-bot/monitor.sh`:
 
 ```bash
 #!/bin/bash
@@ -350,7 +350,7 @@ sudo crontab -e
 Add line:
 
 ```
-*/5 * * * * /opt/ApacheAnswersPowerAutomateIntegration/monitor.sh
+*/5 * * * * /opt/apache-answers-bot/monitor.sh
 ```
 
 ### Disk Space Monitoring
@@ -397,12 +397,12 @@ systemd-analyze security apache-answers-bot
 ```bash
 # Backup configuration and logs
 sudo tar -czf apache-answers-bot-backup-$(date +%Y%m%d).tar.gz \
-    /opt/ApacheAnswersPowerAutomateIntegration/.env \
+    /opt/apache-answers-bot/.env \
     /var/log/apache-answers-bot/ \
     /etc/systemd/system/apache-answers-bot.service
 
 # Automated daily backup (add to crontab)
-0 2 * * * tar -czf /backup/apache-answers-bot-$(date +\%Y\%m\%d).tar.gz /opt/ApacheAnswersPowerAutomateIntegration/.env /var/log/apache-answers-bot/
+0 2 * * * tar -czf /backup/apache-answers-bot-$(date +\%Y\%m\%d).tar.gz /opt/apache-answers-bot/.env /var/log/apache-answers-bot/
 ```
 
 ## Performance Tuning
@@ -449,7 +449,7 @@ sudo systemctl daemon-reload
 sudo userdel apache-answers-bot
 
 # Optionally remove application directory
-sudo rm -rf /opt/ApacheAnswersPowerAutomateIntegration
+sudo rm -rf /opt/apache-answers-bot
 ```
 
 ## Quick Reference Card
@@ -467,7 +467,7 @@ sudo systemctl status apache-answers-bot
 sudo journalctl -u apache-answers-bot -f
 
 # Application logs
-sudo tail -f /opt/ApacheAnswersPowerAutomateIntegration/logs/combined.log
+sudo tail -f /opt/apache-answers-bot/logs/combined.log
 
 # Reload after config changes
 sudo systemctl daemon-reload

@@ -13,13 +13,13 @@ This deployment uses a **symlink approach** to store logs in the FHS-standard lo
 ├── combined.log-20241030                 <- Rotated log (gzipped)
 └── error.log-20241030                    <- Rotated error log (gzipped)
 
-/opt/ApacheAnswersPowerAutomateIntegration/logs/  <- Symlink pointing to above
+/opt/apache-answers-bot/logs/  <- Symlink pointing to above
 ```
 
 ## How It Works
 
 1. **Real Directory**: `/var/log/apache-answers-bot/` is created during installation
-2. **Symlink**: `/opt/ApacheAnswersPowerAutomateIntegration/logs/` → `/var/log/apache-answers-bot/`
+2. **Symlink**: `/opt/apache-answers-bot/logs/` → `/var/log/apache-answers-bot/`
 3. **Application**: Writes to `logs/combined.log` and `logs/error.log` (relative paths)
 4. **Result**: Files actually end up in `/var/log/apache-answers-bot/` automatically
 
@@ -40,7 +40,7 @@ Both paths work identically:
 sudo tail -f /var/log/apache-answers-bot/combined.log
 
 # Via symlink (same file)
-sudo tail -f /opt/ApacheAnswersPowerAutomateIntegration/logs/combined.log
+sudo tail -f /opt/apache-answers-bot/logs/combined.log
 
 # List all logs
 ls -lh /var/log/apache-answers-bot/
@@ -52,7 +52,7 @@ After installation, verify the symlink:
 
 ```bash
 # Check symlink exists and points to correct location
-ls -la /opt/ApacheAnswersPowerAutomateIntegration/logs
+ls -la /opt/apache-answers-bot/logs
 
 # Output should show:
 # lrwxrwxrwx 1 apache-answers-bot apache-answers-bot 29 Oct 30 12:00 logs -> /var/log/apache-answers-bot
@@ -103,10 +103,10 @@ When backing up, use the actual directory (not the symlink):
 sudo tar -czf logs-backup.tar.gz /var/log/apache-answers-bot/
 
 # This also works but creates symlink in archive
-sudo tar -czf logs-backup.tar.gz /opt/ApacheAnswersPowerAutomateIntegration/logs/
+sudo tar -czf logs-backup.tar.gz /opt/apache-answers-bot/logs/
 
 # Best practice: use -h flag to follow symlinks
-sudo tar -czfh logs-backup.tar.gz /opt/ApacheAnswersPowerAutomateIntegration/logs/
+sudo tar -czfh logs-backup.tar.gz /opt/apache-answers-bot/logs/
 ```
 
 ## Monitoring Disk Usage
@@ -130,13 +130,13 @@ If the symlink is broken or missing:
 
 ```bash
 # Remove broken symlink if exists
-rm /opt/ApacheAnswersPowerAutomateIntegration/logs
+rm /opt/apache-answers-bot/logs
 
 # Recreate symlink
-ln -s /var/log/apache-answers-bot /opt/ApacheAnswersPowerAutomateIntegration/logs
+ln -s /var/log/apache-answers-bot /opt/apache-answers-bot/logs
 
 # Verify
-ls -la /opt/ApacheAnswersPowerAutomateIntegration/logs
+ls -la /opt/apache-answers-bot/logs
 ```
 
 ### Permission Issues
@@ -160,23 +160,23 @@ If logs appear in both locations:
 
 ```bash
 # Check if it's a real directory instead of symlink
-ls -la /opt/ApacheAnswersPowerAutomateIntegration/logs
+ls -la /opt/apache-answers-bot/logs
 
 # If it's a directory (d) instead of symlink (l):
 # 1. Stop service
 sudo systemctl stop apache-answers-bot
 
 # 2. Move files to /var/log
-sudo mv /opt/ApacheAnswersPowerAutomateIntegration/logs/*.log /var/log/apache-answers-bot/
+sudo mv /opt/apache-answers-bot/logs/*.log /var/log/apache-answers-bot/
 
 # 3. Remove directory
-sudo rmdir /opt/ApacheAnswersPowerAutomateIntegration/logs
+sudo rmdir /opt/apache-answers-bot/logs
 
 # 4. Create symlink
-sudo ln -s /var/log/apache-answers-bot /opt/ApacheAnswersPowerAutomateIntegration/logs
+sudo ln -s /var/log/apache-answers-bot /opt/apache-answers-bot/logs
 
 # 5. Fix ownership
-sudo chown -h apache-answers-bot:apache-answers-bot /opt/ApacheAnswersPowerAutomateIntegration/logs
+sudo chown -h apache-answers-bot:apache-answers-bot /opt/apache-answers-bot/logs
 
 # 6. Start service
 sudo systemctl start apache-answers-bot

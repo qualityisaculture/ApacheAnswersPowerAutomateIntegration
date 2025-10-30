@@ -3,7 +3,7 @@
 ## Installation
 
 ```bash
-# Copy files to /opt/ApacheAnswersPowerAutomateIntegration
+# Copy files to /opt/apache-answers-bot
 # Configure .env file
 # Run installer
 sudo ./install-systemd.sh
@@ -54,8 +54,8 @@ sudo tail -f /var/log/apache-answers-bot/combined.log
 sudo tail -f /var/log/apache-answers-bot/error.log
 
 # Or via symlink
-sudo tail -f /opt/ApacheAnswersPowerAutomateIntegration/logs/combined.log
-sudo tail -f /opt/ApacheAnswersPowerAutomateIntegration/logs/error.log
+sudo tail -f /opt/apache-answers-bot/logs/combined.log
+sudo tail -f /opt/apache-answers-bot/logs/error.log
 
 # List rotated logs
 ls -lh /var/log/apache-answers-bot/
@@ -87,13 +87,13 @@ sudo systemctl status apache-answers-bot -l --no-pager
 sudo journalctl -u apache-answers-bot -p err -n 50
 
 # Test manual run as service user
-sudo -u apache-answers-bot /usr/bin/node /opt/ApacheAnswersPowerAutomateIntegration/dist/index.js
+sudo -u apache-answers-bot /usr/bin/node /opt/apache-answers-bot/dist/index.js
 
 # Check file permissions
-sudo ls -la /opt/ApacheAnswersPowerAutomateIntegration
+sudo ls -la /opt/apache-answers-bot
 
 # Verify .env file
-sudo ls -la /opt/ApacheAnswersPowerAutomateIntegration/.env
+sudo ls -la /opt/apache-answers-bot/.env
 
 # Check port conflicts
 sudo netstat -tlnp | grep 3000
@@ -133,7 +133,7 @@ journalctl --disk-usage
 ## Updates
 
 ```bash
-cd /opt/ApacheAnswersPowerAutomateIntegration
+cd /opt/apache-answers-bot
 
 # Pull changes (if using git)
 sudo -u apache-answers-bot git pull
@@ -171,13 +171,13 @@ systemd-analyze blame
 ## File Locations
 
 ```
-Application:     /opt/ApacheAnswersPowerAutomateIntegration
+Application:     /opt/apache-answers-bot
 Service File:    /etc/systemd/system/apache-answers-bot.service
 Logrotate:       /etc/logrotate.d/apache-answers-bot
 App Logs:        /var/log/apache-answers-bot/ (FHS standard location)
-                 /opt/ApacheAnswersPowerAutomateIntegration/logs/ (symlink)
+                 /opt/apache-answers-bot/logs/ (symlink)
 System Logs:     journalctl -u apache-answers-bot
-Environment:     /opt/ApacheAnswersPowerAutomateIntegration/.env
+Environment:     /opt/apache-answers-bot/.env
 ```
 
 ## Emergency Commands
@@ -212,12 +212,12 @@ sudo kill <PID>
 
 **Permission denied:**
 ```bash
-sudo chown -R apache-answers-bot:apache-answers-bot /opt/ApacheAnswersPowerAutomateIntegration
-sudo chmod 600 /opt/ApacheAnswersPowerAutomateIntegration/.env
+sudo chown -R apache-answers-bot:apache-answers-bot /opt/apache-answers-bot
+sudo chmod 600 /opt/apache-answers-bot/.env
 ```
 
 **Module not found:**
 ```bash
-cd /opt/ApacheAnswersPowerAutomateIntegration
+cd /opt/apache-answers-bot
 sudo -u apache-answers-bot npm ci --only=production
 ```

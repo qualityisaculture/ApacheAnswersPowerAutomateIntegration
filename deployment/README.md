@@ -28,20 +28,20 @@ This directory contains all files needed to deploy the Apache Answers - Microsof
   - ⚠️ **Important**: If you have Node.js via nvm, see [NODEJS_INSTALLATION.md](./NODEJS_INSTALLATION.md)
   - systemd services require Node.js at `/usr/bin/node` or `/usr/local/bin/node`
 - Root or sudo access
-- Application can be deployed to any directory (e.g., `/opt/ApacheAnswersPowerAutomateIntegration`)
+- Application can be deployed to any directory (e.g., `/opt/apache-answers-bot`)
 
 ### Installation
 
 1. **Prepare the application**:
    ```bash
-   cd /opt/ApacheAnswersPowerAutomateIntegration
+   cd /opt/apache-answers-bot
    cp env.example .env
    nano .env  # Configure your environment variables
    ```
 
 2. **Run the installer**:
    ```bash
-   cd /opt/ApacheAnswersPowerAutomateIntegration/deployment
+   cd /opt/apache-answers-bot/deployment
    sudo ./install-systemd.sh
    ```
 
@@ -57,7 +57,7 @@ This directory contains all files needed to deploy the Apache Answers - Microsof
 - **Service Name**: `apache-answers-bot`
 - **Service File**: `/etc/systemd/system/apache-answers-bot.service`
 - **Log Directory**: `/var/log/apache-answers-bot/` (FHS compliant)
-- **Log Symlink**: `/opt/ApacheAnswersPowerAutomateIntegration/logs/` → `/var/log/apache-answers-bot/`
+- **Log Symlink**: `/opt/apache-answers-bot/logs/` → `/var/log/apache-answers-bot/`
 - **Logrotate Config**: `/etc/logrotate.d/apache-answers-bot`
 
 ## Common Commands
@@ -80,7 +80,7 @@ curl http://localhost:3000/health
 ## Uninstallation
 
 ```bash
-cd /opt/ApacheAnswersPowerAutomateIntegration/deployment
+cd /opt/apache-answers-bot/deployment
 sudo ./uninstall-systemd.sh
 ```
 
@@ -95,7 +95,7 @@ For detailed information, see:
 ## File Locations
 
 ```
-/opt/ApacheAnswersPowerAutomateIntegration/
+/opt/apache-answers-bot/
 ├── deployment/                        <- This directory
 │   ├── apache-answers-bot.service
 │   ├── apache-answers-bot.logrotate

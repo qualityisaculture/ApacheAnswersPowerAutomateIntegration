@@ -48,7 +48,7 @@ This tool enables seamless communication between Apache Answers and Microsoft Te
 
    ```bash
    git clone <repository-url>
-   cd ApacheAnswersPowerAutomateIntegration
+   cd apache-answers-bot
    ```
 
 2. **Install dependencies**:
@@ -216,7 +216,7 @@ For production deployment on Ubuntu as a systemd service, see the **[deployment 
 
 ```bash
 # On your Ubuntu server
-cd /opt/ApacheAnswersPowerAutomateIntegration/deployment
+cd /opt/apache-answers-bot/deployment
 sudo ./install-systemd.sh
 ```
 
