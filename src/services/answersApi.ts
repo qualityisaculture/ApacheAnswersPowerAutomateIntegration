@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from "axios";
+import axios, { AxiosInstance, AxiosError } from "axios";
 import https from "https";
 import {
   AnswerPost,
@@ -13,33 +13,45 @@ import {
 } from "../types/answers";
 import { config } from "../config/config";
 import logger from "./logger";
+import { getAccessToken } from "../utils/getAccessToken";
 
 export class AnswersApiService {
   private client: AxiosInstance;
   private lastCheckedPostId: string | null = null;
+  private currentAccessToken: string | null = null;
+  private tokenRefreshPromise: Promise<string> | null = null;
 
   constructor() {
+    this.currentAccessToken = config.answers.accessToken || null;
+    
     this.client = axios.create({
       baseURL: config.answers.baseUrl,
       timeout: 10000,
       headers: {
         "Content-Type": "application/json",
-        ...(config.answers.accessToken && {
-          Authorization: `Bearer ${config.answers.accessToken}`,
-        }),
       },
       httpsAgent: new https.Agent({
         rejectUnauthorized: false,
       }),
     });
 
-    // Add request/response interceptors for logging
+    // Add request interceptor to ensure token is set
     this.client.interceptors.request.use(
-      (config) => {
+      async (requestConfig) => {
+        // Ensure we have a token before making authenticated requests
+        if (requestConfig.method && ['post', 'put', 'patch', 'delete'].includes(requestConfig.method.toLowerCase())) {
+          await this.ensureAccessToken();
+        }
+        
+        // Set the authorization header if we have a token
+        if (this.currentAccessToken) {
+          requestConfig.headers.Authorization = `Bearer ${this.currentAccessToken}`;
+        }
+        
         logger.debug(
-          `Making request to: ${config.method?.toUpperCase()} ${config.url}`
+          `Making request to: ${requestConfig.method?.toUpperCase()} ${requestConfig.url}`
         );
-        return config;
+        return requestConfig;
       },
       (error) => {
         logger.error("Request error:", error);
@@ -47,6 +59,7 @@ export class AnswersApiService {
       }
     );
 
+    // Add response interceptor to handle 401 errors and refresh token
     this.client.interceptors.response.use(
       (response) => {
         logger.debug(
@@ -54,11 +67,72 @@ export class AnswersApiService {
         );
         return response;
       },
-      (error) => {
+      async (error: AxiosError) => {
+        const originalRequest = error.config as any;
+        
+        // If we get a 401 and haven't already retried, try to refresh the token
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+          
+          logger.info("Received 401 error, attempting to refresh access token...");
+          
+          try {
+            await this.refreshAccessToken();
+            
+            // Retry the original request with the new token
+            if (this.currentAccessToken) {
+              originalRequest.headers.Authorization = `Bearer ${this.currentAccessToken}`;
+            }
+            
+            return this.client(originalRequest);
+          } catch (refreshError) {
+            logger.error("Failed to refresh access token:", refreshError);
+            return Promise.reject(refreshError);
+          }
+        }
+        
         logger.error("Response error:", error.response?.data || error.message);
         return Promise.reject(error);
       }
     );
+  }
+
+  /**
+   * Ensure we have a valid access token, fetching one if needed
+   */
+  private async ensureAccessToken(): Promise<void> {
+    if (!this.currentAccessToken) {
+      await this.refreshAccessToken();
+    }
+  }
+
+  /**
+   * Refresh the access token by authenticating with email/password
+   */
+  private async refreshAccessToken(): Promise<string> {
+    // If there's already a refresh in progress, wait for it
+    if (this.tokenRefreshPromise) {
+      return this.tokenRefreshPromise;
+    }
+
+    // Start a new refresh
+    this.tokenRefreshPromise = (async () => {
+      try {
+        logger.info("Fetching new access token...");
+        const token = await getAccessToken();
+        this.currentAccessToken = token;
+        logger.info("Successfully refreshed access token");
+        return token;
+      } catch (error) {
+        logger.error("Failed to refresh access token:", error);
+        throw error;
+      } finally {
+        // Clear the promise so we can refresh again if needed
+        this.tokenRefreshPromise = null;
+      }
+    })();
+
+    return this.tokenRefreshPromise;
   }
 
   /**
